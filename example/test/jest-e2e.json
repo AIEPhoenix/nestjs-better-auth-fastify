@@ -1,0 +1,24 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": ".",
+  "testEnvironment": "node",
+  "testRegex": ".e2e-spec.ts$",
+  "testPathIgnorePatterns": ["/node_modules/", "/e2e-real/"],
+  "transform": {
+    "^.+\\.(t|j)s$": [
+      "ts-jest",
+      {
+        "tsconfig": "<rootDir>/../tsconfig.json",
+        "diagnostics": {
+          "ignoreCodes": [151002]
+        }
+      }
+    ]
+  },
+  "setupFilesAfterEnv": ["<rootDir>/e2e/setup/jest-setup.ts"],
+  "moduleNameMapper": {
+    "^nestjs-better-auth-fastify$": "<rootDir>/../../src/index.ts",
+    "^(\\.{1,2}/.*)\\.js$": "$1"
+  },
+  "testTimeout": 30000
+}

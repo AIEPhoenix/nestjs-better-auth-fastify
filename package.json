@@ -1,0 +1,96 @@
+{
+  "name": "nestjs-better-auth-fastify",
+  "version": "0.1.0",
+  "description": "Better Auth integration for NestJS with Fastify adapter",
+  "author": "aiephoenixbl@gmail.com",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AIEPhoenix/nestjs-better-auth-fastify.git"
+  },
+  "bugs": {
+    "url": "https://github.com/AIEPhoenix/nestjs-better-auth-fastify/issues"
+  },
+  "homepage": "https://github.com/AIEPhoenix/nestjs-better-auth-fastify#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "pnpm clean && tsc",
+    "build:watch": "tsc --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "pnpm --filter @nestjs-better-auth-fastify/example test",
+    "test:cov": "pnpm --filter @nestjs-better-auth-fastify/example test:cov",
+    "lint": "eslint \"{src,example/src,example/test}/**/*.ts\"",
+    "lint:fix": "eslint \"{src,example/src,example/test}/**/*.ts\" --fix",
+    "format": "prettier --write \"{src,example/src,example/test}/**/*.ts\"",
+    "format:check": "prettier --check \"{src,example/src,example/test}/**/*.ts\"",
+    "prepublishOnly": "pnpm build"
+  },
+  "keywords": [
+    "nestjs",
+    "better-auth",
+    "fastify",
+    "authentication",
+    "auth",
+    "session",
+    "jwt",
+    "guard"
+  ],
+  "peerDependencies": {
+    "@nestjs/common": "^10.0.0 || ^11.0.0",
+    "@nestjs/core": "^10.0.0 || ^11.0.0",
+    "better-auth": "^1.0.0",
+    "fastify": "^4.0.0 || ^5.0.0",
+    "reflect-metadata": "^0.1.13 || ^0.2.0"
+  },
+  "peerDependenciesMeta": {
+    "@nestjs/graphql": {
+      "optional": true
+    },
+    "@nestjs/websockets": {
+      "optional": true
+    },
+    "graphql": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/graphql": "^13.2.3",
+    "@nestjs/platform-socket.io": "^11.1.11",
+    "@nestjs/websockets": "^11.1.11",
+    "@types/node": "^22.0.0",
+    "better-auth": "^1.2.0",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-prettier": "^5.2.2",
+    "fastify": "^5.0.0",
+    "globals": "^16.0.0",
+    "graphql": "^16.12.0",
+    "prettier": "^3.4.2",
+    "reflect-metadata": "^0.2.0",
+    "rxjs": "^7.8.0",
+    "typescript": "^5.0.0",
+    "typescript-eslint": "^8.20.0"
+  }
+}
