@@ -22,8 +22,8 @@ import {
   CurrentUser,
   UserProperty,
   AuthService,
-} from 'nestjs-better-auth-fastify';
-import type { UserSession, AdminUser } from 'nestjs-better-auth-fastify';
+} from '@sapix/nestjs-better-auth-fastify';
+import type { UserSession, AdminUser } from '@sapix/nestjs-better-auth-fastify';
 import { AppService } from './app.service';
 
 /**
@@ -57,7 +57,7 @@ export class AppController {
     return {
       name: 'NestJS Better Auth Fastify Example',
       version: '1.0.0',
-      description: 'Complete usage demonstration of nestjs-better-auth-fastify',
+      description: 'Complete usage demonstration of @sapix/nestjs-better-auth-fastify',
       endpoints: {
         auth: '/api/auth/*',
         users: '/users/*',

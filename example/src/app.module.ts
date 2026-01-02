@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { AuthModule } from 'nestjs-better-auth-fastify';
+import { AuthModule } from '@sapix/nestjs-better-auth-fastify';
 import type {
   AuthModuleOptions,
   OrgRolePermissions,
-} from 'nestjs-better-auth-fastify';
+} from '@sapix/nestjs-better-auth-fastify';
 import { auth } from './auth/auth.config';
 import { AuthHooksService } from './auth/auth-hooks.service';
 import { AppController } from './app.controller';

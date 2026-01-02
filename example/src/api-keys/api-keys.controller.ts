@@ -23,8 +23,8 @@ import {
   ApiKey,
   CurrentUser,
   Permissions,
-} from 'nestjs-better-auth-fastify';
-import type { UserSession, ApiKeyValidation } from 'nestjs-better-auth-fastify';
+} from '@sapix/nestjs-better-auth-fastify';
+import type { UserSession, ApiKeyValidation } from '@sapix/nestjs-better-auth-fastify';
 
 type ApiKeyInfo = NonNullable<ApiKeyValidation['key']>;
 

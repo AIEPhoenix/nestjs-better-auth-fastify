@@ -5,7 +5,7 @@ import {
   UnauthorizedException,
   ForbiddenException,
 } from '@nestjs/common';
-import { AuthGuard, AUTH_MODULE_OPTIONS } from 'nestjs-better-auth-fastify';
+import { AuthGuard, AUTH_MODULE_OPTIONS } from '@sapix/nestjs-better-auth-fastify';
 import type { FastifyRequest } from 'fastify';
 
 // FastifyRequest is already extended by the main package (auth.types.ts)
