@@ -16,8 +16,8 @@ import {
   DisallowImpersonation,
   CurrentUser,
   Session,
-} from 'nestjs-better-auth-fastify';
-import type { UserSession } from 'nestjs-better-auth-fastify';
+} from '@sapix/nestjs-better-auth-fastify';
+import type { UserSession } from '@sapix/nestjs-better-auth-fastify';
 
 /**
  * Admin Controller

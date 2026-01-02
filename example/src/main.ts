@@ -16,7 +16,7 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('NestJS Better Auth Fastify Example')
     .setDescription(
-      'API documentation for nestjs-better-auth-fastify example application. ' +
+      'API documentation for @sapix/nestjs-better-auth-fastify example application. ' +
         'This demonstrates integration of Better Auth with NestJS + Fastify.',
     )
     .setVersion('1.0')

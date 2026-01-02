@@ -37,7 +37,7 @@ import {
   HOOK_KEY,
   BEFORE_HOOK_KEY,
   AFTER_HOOK_KEY,
-} from 'nestjs-better-auth-fastify';
+} from '@sapix/nestjs-better-auth-fastify';
 
 describe('auth.decorators', () => {
   describe('Metadata Keys', () => {

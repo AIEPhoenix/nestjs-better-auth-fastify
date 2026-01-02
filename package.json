@@ -1,5 +1,5 @@
 {
-  "name": "nestjs-better-auth-fastify",
+  "name": "@sapix/nestjs-better-auth-fastify",
   "version": "0.1.0",
   "description": "Better Auth integration for NestJS with Fastify adapter",
   "author": "aiephoenixbl@gmail.com",
@@ -36,8 +36,8 @@
     "build": "pnpm clean && tsc",
     "build:watch": "tsc --watch",
     "typecheck": "tsc --noEmit",
-    "test": "pnpm --filter @nestjs-better-auth-fastify/example test",
-    "test:cov": "pnpm --filter @nestjs-better-auth-fastify/example test:cov",
+    "test": "pnpm --filter @sapix/nestjs-better-auth-fastify-example test",
+    "test:cov": "pnpm --filter @sapix/nestjs-better-auth-fastify-example test:cov",
     "lint": "eslint \"{src,example/src,example/test}/**/*.ts\"",
     "lint:fix": "eslint \"{src,example/src,example/test}/**/*.ts\" --fix",
     "format": "prettier --write \"{src,example/src,example/test}/**/*.ts\"",

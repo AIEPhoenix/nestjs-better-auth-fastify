@@ -16,12 +16,12 @@ import {
   CurrentUser,
   CurrentOrg,
   OrgMember,
-} from 'nestjs-better-auth-fastify';
+} from '@sapix/nestjs-better-auth-fastify';
 import type {
   UserSession,
   Organization,
   OrganizationMember,
-} from 'nestjs-better-auth-fastify';
+} from '@sapix/nestjs-better-auth-fastify';
 
 /**
  * Organization Controller

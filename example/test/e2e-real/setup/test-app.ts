@@ -9,7 +9,7 @@ import {
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
 import { Module } from '@nestjs/common';
-import { AuthModule } from 'nestjs-better-auth-fastify';
+import { AuthModule } from '@sapix/nestjs-better-auth-fastify';
 import {
   createTestAuth,
   closeTestDb,

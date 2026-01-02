@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
-import { AuthService, AUTH_MODULE_OPTIONS } from 'nestjs-better-auth-fastify';
+import { AuthService, AUTH_MODULE_OPTIONS } from '@sapix/nestjs-better-auth-fastify';
 import type { FastifyRequest } from 'fastify';
 
 describe('AuthService', () => {

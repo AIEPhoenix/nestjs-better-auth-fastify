@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Hook, BeforeHook, AfterHook } from 'nestjs-better-auth-fastify';
-import type { EnhancedAuthHookContext } from 'nestjs-better-auth-fastify';
+import { Hook, BeforeHook, AfterHook } from '@sapix/nestjs-better-auth-fastify';
+import type { EnhancedAuthHookContext } from '@sapix/nestjs-better-auth-fastify';
 
 /**
  * Authentication Hooks Service

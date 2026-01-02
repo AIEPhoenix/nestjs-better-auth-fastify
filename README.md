@@ -11,9 +11,9 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/nestjs-better-auth-fastify"><img src="https://img.shields.io/npm/v/nestjs-better-auth-fastify.svg" alt="NPM Version" /></a>
-  <a href="https://www.npmjs.com/package/nestjs-better-auth-fastify"><img src="https://img.shields.io/npm/l/nestjs-better-auth-fastify.svg" alt="Package License" /></a>
-  <a href="https://www.npmjs.com/package/nestjs-better-auth-fastify"><img src="https://img.shields.io/npm/dm/nestjs-better-auth-fastify.svg" alt="NPM Downloads" /></a>
+  <a href="https://www.npmjs.com/package/@sapix/nestjs-better-auth-fastify"><img src="https://img.shields.io/npm/v/@sapix/nestjs-better-auth-fastify.svg" alt="NPM Version" /></a>
+  <a href="https://www.npmjs.com/package/@sapix/nestjs-better-auth-fastify"><img src="https://img.shields.io/npm/l/@sapix/nestjs-better-auth-fastify.svg" alt="Package License" /></a>
+  <a href="https://www.npmjs.com/package/@sapix/nestjs-better-auth-fastify"><img src="https://img.shields.io/npm/dm/@sapix/nestjs-better-auth-fastify.svg" alt="NPM Downloads" /></a>
 </p>
 
 ## Table of Contents
@@ -54,13 +54,13 @@
 
 ```bash
 # npm
-npm install nestjs-better-auth-fastify better-auth
+npm install @sapix/nestjs-better-auth-fastify better-auth
 
 # pnpm
-pnpm add nestjs-better-auth-fastify better-auth
+pnpm add @sapix/nestjs-better-auth-fastify better-auth
 
 # yarn
-yarn add nestjs-better-auth-fastify better-auth
+yarn add @sapix/nestjs-better-auth-fastify better-auth
 ```
 
 ### Optional Dependencies
@@ -101,7 +101,7 @@ export type Auth = typeof auth;
 ```typescript
 // src/app.module.ts
 import { Module } from '@nestjs/common';
-import { AuthModule } from 'nestjs-better-auth-fastify';
+import { AuthModule } from '@sapix/nestjs-better-auth-fastify';
 import { auth } from './auth/auth.config';
 
 @Module({
@@ -126,7 +126,7 @@ import {
   CurrentUser,
   Roles,
   UserSession,
-} from 'nestjs-better-auth-fastify';
+} from '@sapix/nestjs-better-auth-fastify';
 
 @Controller('user')
 export class UserController {
@@ -433,7 +433,7 @@ import {
   BeforeHook,
   AfterHook,
   AuthHookContext,
-} from 'nestjs-better-auth-fastify';
+} from '@sapix/nestjs-better-auth-fastify';
 
 @Hook()
 @Injectable()
@@ -500,7 +500,7 @@ export class AppModule {}
 
 ```typescript
 import { Injectable } from '@nestjs/common';
-import { AuthService, UserSession } from 'nestjs-better-auth-fastify';
+import { AuthService, UserSession } from '@sapix/nestjs-better-auth-fastify';
 import type { Auth } from './auth/auth.config';
 
 @Injectable()
@@ -619,7 +619,7 @@ The library supports full type inference from your Better Auth configuration.
 ### Using $Infer Pattern
 
 ```typescript
-import { AuthService } from 'nestjs-better-auth-fastify';
+import { AuthService } from '@sapix/nestjs-better-auth-fastify';
 import type { Auth } from './auth/auth.config';
 
 @Injectable()
@@ -641,7 +641,7 @@ type User = typeof authService.$Infer.User;
 ### Using InferSession and InferUser
 
 ```typescript
-import { InferSession, InferUser } from 'nestjs-better-auth-fastify';
+import { InferSession, InferUser } from '@sapix/nestjs-better-auth-fastify';
 import type { Auth } from './auth/auth.config';
 
 type MySession = InferSession<Auth>;
@@ -761,7 +761,7 @@ Then use `@UseGuards(AuthGuard)` on specific routes:
 
 ```typescript
 import { UseGuards } from '@nestjs/common';
-import { AuthGuard } from 'nestjs-better-auth-fastify';
+import { AuthGuard } from '@sapix/nestjs-better-auth-fastify';
 
 @Controller('protected')
 @UseGuards(AuthGuard)
@@ -824,7 +824,7 @@ import {
   getWebHeadersFromRequest,
   writeWebResponseToReply,
   normalizeBasePath,
-} from 'nestjs-better-auth-fastify';
+} from '@sapix/nestjs-better-auth-fastify';
 
 // Convert Fastify headers to Web standard Headers
 const webHeaders = toWebHeaders(request.headers);
@@ -880,7 +880,7 @@ getProfile(@Req() request: FastifyRequest) {
 
 ```typescript
 import { Test } from '@nestjs/testing';
-import { AuthModule, AuthService, AUTH_MODULE_OPTIONS } from 'nestjs-better-auth-fastify';
+import { AuthModule, AuthService, AUTH_MODULE_OPTIONS } from '@sapix/nestjs-better-auth-fastify';
 
 const module = await Test.createTestingModule({
   imports: [AuthModule.forRoot({ auth, disableGlobalGuard: true })],

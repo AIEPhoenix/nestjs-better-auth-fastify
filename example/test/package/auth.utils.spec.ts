@@ -5,7 +5,7 @@ import {
   toWebRequest,
   writeWebResponseToReply,
   normalizeBasePath,
-} from 'nestjs-better-auth-fastify';
+} from '@sapix/nestjs-better-auth-fastify';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 describe('auth.utils', () => {

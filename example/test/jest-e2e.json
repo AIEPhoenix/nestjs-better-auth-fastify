@@ -17,7 +17,7 @@
   },
   "setupFilesAfterEnv": ["<rootDir>/e2e/setup/jest-setup.ts"],
   "moduleNameMapper": {
-    "^nestjs-better-auth-fastify$": "<rootDir>/../../src/index.ts",
+    "^@sapix/nestjs-better-auth-fastify$": "<rootDir>/../../src/index.ts",
     "^(\\.{1,2}/.*)\\.js$": "$1"
   },
   "testTimeout": 30000
