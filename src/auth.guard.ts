@@ -33,7 +33,6 @@ import {
   FRESH_SESSION_KEY,
   ADMIN_ONLY_KEY,
   BAN_CHECK_KEY,
-  BEARER_AUTH_KEY,
   API_KEY_AUTH_KEY,
   DISALLOW_IMPERSONATION_KEY,
   ORG_REQUIRED_KEY,
@@ -145,7 +144,6 @@ type ErrorType =
   | 'UNAUTHORIZED'
   | 'FORBIDDEN'
   | 'SESSION_NOT_FRESH'
-  | 'SESSION_EXPIRED'
   | 'USER_BANNED'
   | 'ORG_REQUIRED'
   | 'ORG_ROLE_REQUIRED'
@@ -166,7 +164,6 @@ const DEFAULT_ERROR_MESSAGES: Record<ErrorType, string> = {
   UNAUTHORIZED: 'Authentication required',
   FORBIDDEN: 'Insufficient permissions',
   SESSION_NOT_FRESH: 'Session is not fresh. Please re-authenticate.',
-  SESSION_EXPIRED: 'Session has expired. Please sign in again.',
   USER_BANNED: 'User account is banned',
   ORG_REQUIRED:
     'Organization context required. Please set an active organization.',
@@ -183,7 +180,6 @@ const ERROR_MESSAGE_MAPPING: Record<ErrorType, keyof AuthErrorMessages> = {
   UNAUTHORIZED: 'unauthorized',
   FORBIDDEN: 'forbidden',
   SESSION_NOT_FRESH: 'sessionNotFresh',
-  SESSION_EXPIRED: 'sessionExpired',
   USER_BANNED: 'userBanned',
   ORG_REQUIRED: 'orgRequired',
   ORG_ROLE_REQUIRED: 'orgRoleRequired',
@@ -224,7 +220,6 @@ function createError(
     case 'http':
       switch (errorType) {
         case 'UNAUTHORIZED':
-        case 'SESSION_EXPIRED':
         case 'API_KEY_REQUIRED':
           return new UnauthorizedException({ code, message });
         case 'SESSION_NOT_FRESH':
@@ -257,7 +252,6 @@ interface CachedMetadata {
   isPublic?: boolean;
   isOptional?: boolean;
   apiKeyAuth?: ApiKeyAuthMetadata;
-  bearerAuth?: boolean;
   banCheck?: boolean;
   disallowImpersonation?: { message?: string };
   freshSession?: FreshSessionMetadata;
@@ -305,11 +299,11 @@ const DEFAULT_ORG_ROLE_PERMISSIONS: Record<
 };
 
 /**
- * Default API Key pattern (Better Auth API keys typically start with a prefix)
- * Used to distinguish API keys from Bearer tokens
- * Can be overridden via AuthModuleOptions.apiKeyPattern
+ * Default API Key header (matches Better Auth's default)
+ * API keys should be sent via dedicated headers, not mixed with Bearer tokens
+ * Can be customized via Better Auth apiKey plugin's apiKeyHeaders config
  */
-const DEFAULT_API_KEY_PATTERN = /^[a-z0-9_]+_[A-Za-z0-9]+$/;
+const DEFAULT_API_KEY_HEADERS = ['x-api-key'];
 
 /**
  * Authentication Guard
@@ -343,6 +337,9 @@ export class AuthGuard implements CanActivate {
 
   /** Metadata cache - WeakMap for automatic cleanup */
   private readonly metadataCache = new WeakMap<object, CachedMetadata>();
+
+  /** Cached API key headers - computed once on first use */
+  private cachedApiKeyHeaders: string[] | null = null;
 
   constructor(
     private readonly reflector: Reflector,
@@ -399,8 +396,8 @@ export class AuthGuard implements CanActivate {
       }
     }
 
-    // 3. Get session (supports Cookie or Bearer Token)
-    const session = await this.getSession(request, metadata.bearerAuth);
+    // 3. Get session (supports Cookie or Bearer Token via bearer plugin)
+    const session = await this.getSession(request);
 
     // 4. Attach to request
     request.session = session;
@@ -422,20 +419,7 @@ export class AuthGuard implements CanActivate {
       throw createError(contextType, 'UNAUTHORIZED', undefined, errorMessages);
     }
 
-    // 6. Check session expiration (important security check, can be disabled)
-    if (
-      !this.options.skipSessionExpirationCheck &&
-      this.isSessionExpired(session)
-    ) {
-      throw createError(
-        contextType,
-        'SESSION_EXPIRED',
-        undefined,
-        errorMessages,
-      );
-    }
-
-    // 7. Run security checks (only if needed)
+    // 6. Run security checks (only if needed)
     this.runSecurityChecks(
       contextType,
       metadata,
@@ -444,10 +428,10 @@ export class AuthGuard implements CanActivate {
       errorMessages,
     );
 
-    // 8. Run authorization checks (only if needed)
+    // 7. Run authorization checks (only if needed)
     this.runAuthorizationChecks(contextType, metadata, session, errorMessages);
 
-    // 9. Run organization checks (only if needed)
+    // 8. Run organization checks (only if needed)
     await this.runOrganizationChecks(
       contextType,
       metadata,
@@ -484,10 +468,6 @@ export class AuthGuard implements CanActivate {
       ),
       apiKeyAuth: this.reflector.getAllAndOverride<ApiKeyAuthMetadata>(
         API_KEY_AUTH_KEY,
-        targets,
-      ),
-      bearerAuth: this.reflector.getAllAndOverride<boolean>(
-        BEARER_AUTH_KEY,
         targets,
       ),
       banCheck: this.reflector.getAllAndOverride<boolean>(
@@ -529,20 +509,6 @@ export class AuthGuard implements CanActivate {
 
     this.metadataCache.set(handler, cached);
     return cached;
-  }
-
-  /**
-   * Check if session has expired
-   */
-  private isSessionExpired(session: UserSession): boolean {
-    const expiresAt = session.session.expiresAt;
-    if (!expiresAt) {
-      return false; // No expiration set
-    }
-
-    const expirationDate =
-      expiresAt instanceof Date ? expiresAt : new Date(expiresAt);
-    return expirationDate.getTime() < Date.now();
   }
 
   /**
@@ -783,43 +749,93 @@ export class AuthGuard implements CanActivate {
 
   /**
    * Get session from Better Auth
-   * Supports Cookie and Bearer Token
+   * Supports Cookie and Bearer Token (via bearer plugin)
+   *
+   * Note: API keys should be sent via dedicated headers (x-api-key, api-key, etc.)
+   * not via Authorization: Bearer header
    */
   private async getSession(
     request: FastifyRequest,
-    bearerAuthEnabled?: boolean,
   ): Promise<UserSession | null> {
     try {
-      const rawHeaders = getHeadersFromRequest(request);
-      const headers = toWebHeaders(rawHeaders);
-
-      // If Bearer Auth is enabled, ensure Authorization header is set
-      if (bearerAuthEnabled) {
-        const authHeader = request.headers.authorization;
-        if (authHeader?.startsWith('Bearer ')) {
-          // Check if it looks like an API key (to avoid confusion)
-          const token = authHeader.slice(7);
-          if (!this.looksLikeApiKey(token)) {
-            headers.set('authorization', authHeader);
-          }
-        }
-      }
-
+      const headers = toWebHeaders(getHeadersFromRequest(request));
       return await this.auth.api.getSession({ headers });
-    } catch {
+    } catch (error) {
+      if (this.options.debug) {
+        this.logger.debug('Failed to get session from Better Auth', error);
+      }
       return null;
     }
   }
 
   /**
-   * Check if a token looks like an API key
-   * API keys typically have a specific format (prefix_randomString)
-   * Pattern can be customized via AuthModuleOptions.apiKeyPattern
+   * Get API key headers to check
+   * Reads from Better Auth apiKey plugin's apiKeyHeaders config if available
    */
-  private looksLikeApiKey(token: string): boolean {
-    const pattern: RegExp =
-      this.options.apiKeyPattern ?? DEFAULT_API_KEY_PATTERN;
-    return pattern.test(token);
+  private getApiKeyHeaders(): string[] {
+    // Return cached headers if available
+    if (this.cachedApiKeyHeaders !== null) {
+      return this.cachedApiKeyHeaders;
+    }
+
+    // Try to read from Better Auth apiKey plugin config
+    const configuredHeaders = this.getApiKeyHeadersFromAuth();
+    if (configuredHeaders) {
+      this.cachedApiKeyHeaders = configuredHeaders;
+
+      if (this.options.debug) {
+        this.logger.debug(
+          `Using API key headers from Better Auth config: ${JSON.stringify(configuredHeaders)}`,
+        );
+      }
+
+      return this.cachedApiKeyHeaders;
+    }
+
+    // Default headers
+    this.cachedApiKeyHeaders = DEFAULT_API_KEY_HEADERS;
+    return this.cachedApiKeyHeaders;
+  }
+
+  /**
+   * Try to read apiKey plugin's apiKeyHeaders from Better Auth instance
+   * Returns null if not found or plugin not configured
+   */
+  private getApiKeyHeadersFromAuth(): string[] | null {
+    try {
+      const auth = this.options.auth as {
+        options?: {
+          plugins?: Array<{
+            id?: string;
+            // Plugin options
+            apiKeyHeaders?: string | string[];
+            options?: {
+              apiKeyHeaders?: string | string[];
+            };
+          }>;
+        };
+      };
+
+      // Try to find apiKey plugin config
+      const plugins = auth.options?.plugins;
+      if (plugins && Array.isArray(plugins)) {
+        for (const plugin of plugins) {
+          if (plugin.id === 'api-key' || plugin.id === 'apiKey') {
+            // Check direct property
+            const headers =
+              plugin.apiKeyHeaders ?? plugin.options?.apiKeyHeaders;
+            if (headers) {
+              return Array.isArray(headers) ? headers : [headers];
+            }
+          }
+        }
+      }
+
+      return null;
+    } catch {
+      // Failed to read config, will use default headers
+      return null;
+    }
   }
 
   /**
@@ -929,28 +945,21 @@ export class AuthGuard implements CanActivate {
 
   /**
    * Try API Key authentication
-   * Only processes tokens that look like API keys (with prefix_format)
+   * API keys must be sent via dedicated headers (x-api-key, api-key, etc.)
+   * NOT via Authorization: Bearer header (that's for session tokens)
    */
   private async tryApiKeyAuth(
     request: FastifyRequest,
   ): Promise<Record<string, string[]> | null> {
-    // First, check dedicated API key headers
-    const apiKeyHeader =
-      request.headers['x-api-key'] ?? request.headers['api-key'];
-
+    // Check configured API key headers
+    const headers = this.getApiKeyHeaders();
     let apiKey: string | undefined;
 
-    if (apiKeyHeader && typeof apiKeyHeader === 'string') {
-      apiKey = apiKeyHeader;
-    } else {
-      // Check Authorization header, but only if it looks like an API key
-      const authHeader = request.headers.authorization;
-      if (authHeader?.startsWith('Bearer ')) {
-        const token = authHeader.slice(7);
-        // Only treat as API key if it matches the expected format
-        if (this.looksLikeApiKey(token)) {
-          apiKey = token;
-        }
+    for (const headerName of headers) {
+      const headerValue = request.headers[headerName.toLowerCase()];
+      if (headerValue && typeof headerValue === 'string') {
+        apiKey = headerValue;
+        break;
       }
     }
 
@@ -970,8 +979,11 @@ export class AuthGuard implements CanActivate {
         request.apiKey = result.key;
         return result.key.permissions ?? {};
       }
-    } catch {
-      // Verification failed - don't log to avoid leaking info
+    } catch (error) {
+      // Log in debug mode only to avoid leaking sensitive info in production
+      if (this.options.debug) {
+        this.logger.debug('API key verification failed', error);
+      }
     }
 
     return null;
@@ -1064,7 +1076,7 @@ export class AuthGuard implements CanActivate {
    * Check if user has required organization roles
    */
   private checkOrgRoles(
-    memberRole: string | undefined,
+    memberRole: string | string[] | undefined,
     requiredRoles: string[],
     mode: 'any' | 'all',
   ): boolean {
@@ -1074,7 +1086,10 @@ export class AuthGuard implements CanActivate {
 
     const memberRoles = Array.isArray(memberRole)
       ? memberRole
-      : memberRole.split(',').map((v) => v.trim());
+      : memberRole
+          .split(',')
+          .map((v) => v.trim())
+          .filter(Boolean);
 
     return mode === 'all'
       ? requiredRoles.every((role) => memberRoles.includes(role))

@@ -77,15 +77,6 @@ const authModuleOptions: AuthModuleOptions = {
   // Custom organization role permissions
   orgRolePermissions,
 
-  // Custom API key pattern (for distinguishing API keys from Bearer tokens)
-  // Default: /^[a-z0-9_]+_[A-Za-z0-9]+$/
-  // Example: Matches patterns like "pk_live_abc123", "sk_test_xyz789"
-  apiKeyPattern: /^[a-z0-9_]+_[A-Za-z0-9]+$/,
-
-  // Skip session expiration check in guard
-  // Default: false (recommended to keep false for security)
-  // skipSessionExpirationCheck: false,
-
   // Custom middleware wrapper
   // Useful for logging, rate limiting, etc.
   // middleware: async (req, reply, next) => {

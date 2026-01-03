@@ -606,11 +606,18 @@ export class AuthService<T extends { api: T['api'] } = AuthWithApi> {
   /**
    * Parse roles/permissions string or array to array
    * Optimized to avoid unnecessary array creation
+   * Handles empty strings by returning empty array
    */
   private parseRoles(value: string | string[]): string[] {
     if (Array.isArray(value)) {
       return value;
     }
-    return value.split(',').map((v) => v.trim());
+    if (!value) {
+      return [];
+    }
+    return value
+      .split(',')
+      .map((v) => v.trim())
+      .filter(Boolean);
   }
 }

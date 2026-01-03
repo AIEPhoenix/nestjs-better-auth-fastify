@@ -68,4 +68,5 @@ async function bootstrap() {
   console.log(`Application is running on: ${await app.getUrl()}`);
   console.log(`Swagger docs available at: ${await app.getUrl()}/docs`);
 }
+
 bootstrap();

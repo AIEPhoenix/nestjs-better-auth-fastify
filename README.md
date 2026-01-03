@@ -215,7 +215,7 @@ export const auth = betterAuth({
 | Decorator | Description |
 |-----------|-------------|
 | `@AdminOnly()` | Admin role required |
-| `@BanCheck()` | Deny banned users |
+| `@BanCheck()` | Real-time ban check (Better Auth only checks at session creation) |
 | `@DisallowImpersonation()` | Block impersonated sessions |
 | `@SecureAdminOnly()` | Combined: Admin + Fresh + No Impersonation |
 
@@ -227,7 +227,7 @@ deleteUser() {
   // Only real admins with fresh sessions can execute
 }
 
-// Check if user is banned before allowing action
+// Real-time ban check - useful for users banned after session creation
 @BanCheck()
 @Post('comments')
 createComment() {}
@@ -309,10 +309,10 @@ uploadFile() {}
 Client usage:
 
 ```bash
-curl -H "X-API-Key: <api-key>" /api/external
-# or
-curl -H "Authorization: Bearer <api-key>" /api/external
+curl -H "x-api-key: <api-key>" /api/external
 ```
+
+> **Note**: API keys must be sent via dedicated headers (default: `x-api-key`). Custom headers can be configured via Better Auth's `apiKey` plugin `apiKeyHeaders` option. Do NOT use `Authorization: Bearer` for API keys - that's reserved for session tokens.
 
 ### Organization Plugin Decorators
 
@@ -694,7 +694,6 @@ AuthModule.forRoot({
     unauthorized: 'Please log in first',
     forbidden: 'Insufficient permissions',
     sessionNotFresh: 'Please re-login to perform this action',
-    sessionExpired: 'Session expired, please log in again',
     userBanned: 'Your account has been banned',
     orgRequired: 'Please select an organization first',
     orgRoleRequired: 'Insufficient organization role permissions',
@@ -710,14 +709,6 @@ AuthModule.forRoot({
     admin: { organization: ['read', 'update'], member: ['read', 'create'] },
     member: { organization: ['read'] },
   },
-
-  // Optional: Custom API key pattern for distinguishing API keys from Bearer tokens
-  // Default: /^[a-z0-9_]+_[A-Za-z0-9]+$/
-  apiKeyPattern: /^[a-z0-9_]+_[A-Za-z0-9]+$/,
-
-  // Optional: Skip session expiration check
-  // Better Auth handles this, but double-check is recommended
-  skipSessionExpirationCheck: false,
 });
 ```
 

@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Req,
-  Headers,
-  Param,
-} from '@nestjs/common';
+import { Controller, Get, Post, Req, Headers, Param } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -40,7 +33,10 @@ export class AppController {
 
   @Get()
   @AllowAnonymous()
-  @ApiOperation({ summary: 'Health check', description: 'Public health check endpoint' })
+  @ApiOperation({
+    summary: 'Health check',
+    description: 'Public health check endpoint',
+  })
   @ApiResponse({ status: 200, description: 'Returns Hello World' })
   getHello(): string {
     return this.appService.getHello();
@@ -50,14 +46,16 @@ export class AppController {
   @AllowAnonymous()
   @ApiOperation({
     summary: 'API information',
-    description: 'Lists all available decorators, endpoints, and module options',
+    description:
+      'Lists all available decorators, endpoints, and module options',
   })
   @ApiResponse({ status: 200, description: 'API information object' })
   getApiInfo() {
     return {
       name: 'NestJS Better Auth Fastify Example',
       version: '1.0.0',
-      description: 'Complete usage demonstration of @sapix/nestjs-better-auth-fastify',
+      description:
+        'Complete usage demonstration of @sapix/nestjs-better-auth-fastify',
       endpoints: {
         auth: '/api/auth/*',
         users: '/users/*',
@@ -107,8 +105,6 @@ export class AppController {
         'debug - Enable debug logging',
         'errorMessages - Custom error messages (i18n support)',
         'orgRolePermissions - Custom org role permission mapping',
-        'apiKeyPattern - Custom API key pattern regex',
-        'skipSessionExpirationCheck - Skip session expiry check',
         'middleware - Custom middleware wrapper',
       ],
       authServiceMethods: {
@@ -149,7 +145,8 @@ export class AppController {
   @ApiBearerAuth('bearer')
   @ApiOperation({
     summary: 'Get user profile',
-    description: 'Protected route - requires authentication. Uses @Session() decorator.',
+    description:
+      'Protected route - requires authentication. Uses @Session() decorator.',
   })
   @ApiResponse({ status: 200, description: 'User profile with session info' })
   @ApiResponse({ status: 401, description: 'Unauthorized - no valid session' })
@@ -173,7 +170,8 @@ export class AppController {
   @ApiBearerAuth('bearer')
   @ApiOperation({
     summary: 'Get current user',
-    description: 'Returns current user information using @CurrentUser() decorator',
+    description:
+      'Returns current user information using @CurrentUser() decorator',
   })
   @ApiResponse({ status: 200, description: 'Current user object' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -225,9 +223,13 @@ export class AppController {
   @OptionalAuth()
   @ApiOperation({
     summary: 'Get greeting',
-    description: 'Optional auth - returns personalized or guest greeting based on auth status',
+    description:
+      'Optional auth - returns personalized or guest greeting based on auth status',
   })
-  @ApiResponse({ status: 200, description: 'Greeting message (personalized if authenticated)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Greeting message (personalized if authenticated)',
+  })
   getGreeting(@CurrentUser() user: UserSession['user'] | null) {
     if (user) {
       return {
@@ -251,9 +253,13 @@ export class AppController {
   @OptionalAuth()
   @ApiOperation({
     summary: 'Get session via AuthService',
-    description: 'Demonstrates programmatic session retrieval using AuthService.getSessionFromRequest()',
+    description:
+      'Demonstrates programmatic session retrieval using AuthService.getSessionFromRequest()',
   })
-  @ApiResponse({ status: 200, description: 'Session info or not authenticated message' })
+  @ApiResponse({
+    status: 200,
+    description: 'Session info or not authenticated message',
+  })
   async getSessionViaService(@Req() request: FastifyRequest) {
     const session = await this.authService.getSessionFromRequest(request);
 
@@ -279,7 +285,8 @@ export class AppController {
   @OptionalAuth()
   @ApiOperation({
     summary: 'Check admin status',
-    description: 'Programmatically check user roles using AuthService.hasRole()',
+    description:
+      'Programmatically check user roles using AuthService.hasRole()',
   })
   @ApiResponse({ status: 200, description: 'Admin and moderator status' })
   async checkAdmin(@Req() request: FastifyRequest) {
@@ -307,7 +314,8 @@ export class AppController {
   @ApiBearerAuth('bearer')
   @ApiOperation({
     summary: 'Check session freshness',
-    description: 'Check if session was recently created using AuthService.isSessionFresh()',
+    description:
+      'Check if session was recently created using AuthService.isSessionFresh()',
   })
   @ApiResponse({ status: 200, description: 'Session freshness info' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -400,7 +408,10 @@ export class AppController {
     summary: 'Get JWT token',
     description: 'Get JWT token for the current session (requires JWT plugin)',
   })
-  @ApiResponse({ status: 200, description: 'JWT token or not available message' })
+  @ApiResponse({
+    status: 200,
+    description: 'JWT token or not available message',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getJwt(@Req() request: FastifyRequest) {
     const token = await this.authService.getJwtToken(request);
@@ -450,7 +461,8 @@ export class AppController {
   @ApiBearerAuth('bearer')
   @ApiOperation({
     summary: 'Check user permissions',
-    description: 'Programmatically check permissions using AuthService.hasPermission()',
+    description:
+      'Programmatically check permissions using AuthService.hasPermission()',
   })
   @ApiResponse({ status: 200, description: 'Permission check results' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -485,7 +497,8 @@ export class AppController {
   @OptionalAuth()
   @ApiOperation({
     summary: 'Validate session',
-    description: 'Validate and get full session info using AuthService.validateSession()',
+    description:
+      'Validate and get full session info using AuthService.validateSession()',
   })
   @ApiResponse({ status: 200, description: 'Session validation result' })
   async validateSession(@Req() request: FastifyRequest) {
@@ -512,7 +525,8 @@ export class AppController {
   @ApiBearerAuth('bearer')
   @ApiOperation({
     summary: 'Revoke specific session',
-    description: 'Revoke a specific session by ID (logout from specific device)',
+    description:
+      'Revoke a specific session by ID (logout from specific device)',
   })
   @ApiParam({ name: 'sessionId', description: 'Session ID to revoke' })
   @ApiResponse({ status: 201, description: 'Session revoked' })
@@ -536,7 +550,8 @@ export class AppController {
   @ApiBearerAuth('bearer')
   @ApiOperation({
     summary: 'Check ban status',
-    description: 'Check if current user is banned using AuthService.isUserBanned()',
+    description:
+      'Check if current user is banned using AuthService.isUserBanned()',
   })
   @ApiResponse({ status: 200, description: 'Ban status' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -560,9 +575,14 @@ export class AppController {
   @AllowAnonymous()
   @ApiOperation({
     summary: 'Verify API key',
-    description: 'Programmatically verify an API key using AuthService.verifyApiKey()',
+    description:
+      'Programmatically verify an API key using AuthService.verifyApiKey()',
   })
-  @ApiHeader({ name: 'x-api-key', description: 'API key to verify', required: false })
+  @ApiHeader({
+    name: 'x-api-key',
+    description: 'API key to verify',
+    required: false,
+  })
   @ApiResponse({ status: 200, description: 'API key validation result' })
   async verifyApiKey(@Headers('x-api-key') apiKey: string) {
     if (!apiKey) {
@@ -595,7 +615,8 @@ export class AppController {
   @ApiBearerAuth('bearer')
   @ApiOperation({
     summary: 'Get active organization',
-    description: 'Get the currently active organization using AuthService.getActiveOrganization()',
+    description:
+      'Get the currently active organization using AuthService.getActiveOrganization()',
   })
   @ApiResponse({ status: 200, description: 'Active organization or null' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -659,7 +680,8 @@ export class AppController {
   @ApiBearerAuth('bearer')
   @ApiOperation({
     summary: 'Check organization permission',
-    description: 'Check permissions in active organization using AuthService.hasOrgPermission()',
+    description:
+      'Check permissions in active organization using AuthService.hasOrgPermission()',
   })
   @ApiResponse({ status: 200, description: 'Organization permission results' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -706,7 +728,10 @@ export class AppController {
     summary: 'Get Better Auth instance info',
     description: 'Access underlying Better Auth instance via AuthService',
   })
-  @ApiResponse({ status: 200, description: 'Instance availability and usage info' })
+  @ApiResponse({
+    status: 200,
+    description: 'Instance availability and usage info',
+  })
   getAuthInstanceInfo() {
     const instance = this.authService.instance;
 

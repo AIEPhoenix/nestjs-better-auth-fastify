@@ -330,25 +330,12 @@ describe('AuthModule', () => {
       expect(dynamicModule).toBeDefined();
     });
 
-    it('should accept apiKeyPattern option', () => {
-      const options: AuthModuleOptions = {
-        auth: mockAuth as any,
-        apiKeyPattern: /^sk-[A-Za-z0-9]{32,}$/,
-      };
+    // Note: apiKeyPattern option has been removed
+    // API keys are detected via dedicated headers only (x-api-key, api-key, etc.)
+    // The library auto-reads apiKeyHeaders config from Better Auth's apiKey plugin
 
-      const dynamicModule = AuthModule.forRoot(options);
-      expect(dynamicModule).toBeDefined();
-    });
-
-    it('should accept skipSessionExpirationCheck option', () => {
-      const options: AuthModuleOptions = {
-        auth: mockAuth as any,
-        skipSessionExpirationCheck: true,
-      };
-
-      const dynamicModule = AuthModule.forRoot(options);
-      expect(dynamicModule).toBeDefined();
-    });
+    // Note: skipSessionExpirationCheck option has been removed
+    // Better Auth's getSession API already handles session expiration automatically
   });
 
   describe('onModuleInit', () => {

@@ -14,7 +14,6 @@ export interface AuthErrorMessages {
   unauthorized?: string;
   forbidden?: string;
   sessionNotFresh?: string;
-  sessionExpired?: string;
   userBanned?: string;
   orgRequired?: string;
   orgRoleRequired?: string;
@@ -98,19 +97,6 @@ export interface AuthModuleOptions<T = Auth> {
    * Override the default role-permission mapping
    */
   orgRolePermissions?: OrgRolePermissions;
-
-  /**
-   * Custom API key pattern for distinguishing API keys from Bearer tokens
-   * @default /^[a-z0-9_]+_[A-Za-z0-9]+$/
-   */
-  apiKeyPattern?: RegExp;
-
-  /**
-   * Whether to skip session expiration check
-   * Use with caution - Better Auth should handle this, but double-check is recommended
-   * @default false
-   */
-  skipSessionExpirationCheck?: boolean;
 }
 
 /**
@@ -201,7 +187,8 @@ export interface AdminUser extends BaseUser {
 export interface BaseSession {
   id: string;
   userId: string;
-  expiresAt: Date;
+  /** Session expiration time. May be null/undefined if session never expires */
+  expiresAt: Date | string | null;
   createdAt: Date;
   updatedAt: Date;
   token: string;

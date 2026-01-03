@@ -42,8 +42,18 @@ export class OrganizationController {
       message: 'Public organization list',
       organizations: [
         { id: '1', name: 'Acme Corp', slug: 'acme-corp', memberCount: 50 },
-        { id: '2', name: 'Tech Startup', slug: 'tech-startup', memberCount: 15 },
-        { id: '3', name: 'Design Studio', slug: 'design-studio', memberCount: 8 },
+        {
+          id: '2',
+          name: 'Tech Startup',
+          slug: 'tech-startup',
+          memberCount: 15,
+        },
+        {
+          id: '3',
+          name: 'Design Studio',
+          slug: 'design-studio',
+          memberCount: 8,
+        },
       ],
     };
   }
@@ -61,8 +71,20 @@ export class OrganizationController {
       message: 'My organizations',
       userId: user.id,
       organizations: [
-        { id: '1', name: 'Acme Corp', slug: 'acme-corp', role: 'owner', joinedAt: '2024-01-01' },
-        { id: '2', name: 'Tech Startup', slug: 'tech-startup', role: 'member', joinedAt: '2024-06-15' },
+        {
+          id: '1',
+          name: 'Acme Corp',
+          slug: 'acme-corp',
+          role: 'owner',
+          joinedAt: '2024-01-01',
+        },
+        {
+          id: '2',
+          name: 'Tech Startup',
+          slug: 'tech-startup',
+          role: 'member',
+          joinedAt: '2024-06-15',
+        },
       ],
     };
   }
@@ -73,7 +95,12 @@ export class OrganizationController {
     summary: 'Create organization',
     description: 'Create a new organization',
   })
-  @ApiBody({ schema: { type: 'object', properties: { name: { type: 'string' }, slug: { type: 'string' } } } })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { name: { type: 'string' }, slug: { type: 'string' } },
+    },
+  })
   @ApiResponse({ status: 201, description: 'Organization created' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   createOrganization(
@@ -99,10 +126,15 @@ export class OrganizationController {
   @Get('current')
   @OrgRequired()
   @ApiBearerAuth('bearer')
-  @ApiHeader({ name: 'x-org-id', description: 'Organization ID', required: true })
+  @ApiHeader({
+    name: 'x-org-id',
+    description: 'Organization ID',
+    required: true,
+  })
   @ApiOperation({
     summary: 'Get current organization',
-    description: 'Get details of the active organization (set via x-org-id header)',
+    description:
+      'Get details of the active organization (set via x-org-id header)',
   })
   @ApiResponse({ status: 200, description: 'Organization details' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -117,7 +149,11 @@ export class OrganizationController {
   @Get('current/members')
   @OrgRequired()
   @ApiBearerAuth('bearer')
-  @ApiHeader({ name: 'x-org-id', description: 'Organization ID', required: true })
+  @ApiHeader({
+    name: 'x-org-id',
+    description: 'Organization ID',
+    required: true,
+  })
   @ApiOperation({
     summary: 'Get organization members',
     description: 'List members of the current organization',
@@ -133,9 +169,27 @@ export class OrganizationController {
       organization: org.name,
       currentMember: { role: member.role },
       members: [
-        { id: '1', name: 'Alice', email: 'alice@example.com', role: 'owner', joinedAt: '2024-01-01' },
-        { id: '2', name: 'Bob', email: 'bob@example.com', role: 'admin', joinedAt: '2024-02-15' },
-        { id: '3', name: 'Charlie', email: 'charlie@example.com', role: 'member', joinedAt: '2024-03-20' },
+        {
+          id: '1',
+          name: 'Alice',
+          email: 'alice@example.com',
+          role: 'owner',
+          joinedAt: '2024-01-01',
+        },
+        {
+          id: '2',
+          name: 'Bob',
+          email: 'bob@example.com',
+          role: 'admin',
+          joinedAt: '2024-02-15',
+        },
+        {
+          id: '3',
+          name: 'Charlie',
+          email: 'charlie@example.com',
+          role: 'member',
+          joinedAt: '2024-03-20',
+        },
       ],
     };
   }
@@ -144,7 +198,11 @@ export class OrganizationController {
   @OrgRequired()
   @OrgRoles(['owner', 'admin'])
   @ApiBearerAuth('bearer')
-  @ApiHeader({ name: 'x-org-id', description: 'Organization ID', required: true })
+  @ApiHeader({
+    name: 'x-org-id',
+    description: 'Organization ID',
+    required: true,
+  })
   @ApiOperation({
     summary: 'Get organization settings',
     description: 'Get settings (requires owner or admin role)',
@@ -172,7 +230,11 @@ export class OrganizationController {
   @OrgRequired()
   @OrgRoles(['owner'])
   @ApiBearerAuth('bearer')
-  @ApiHeader({ name: 'x-org-id', description: 'Organization ID', required: true })
+  @ApiHeader({
+    name: 'x-org-id',
+    description: 'Organization ID',
+    required: true,
+  })
   @ApiOperation({
     summary: 'Update organization settings',
     description: 'Update settings (owner only)',
@@ -198,7 +260,11 @@ export class OrganizationController {
   @OrgRequired()
   @OrgPermission({ resource: 'organization', action: 'read' })
   @ApiBearerAuth('bearer')
-  @ApiHeader({ name: 'x-org-id', description: 'Organization ID', required: true })
+  @ApiHeader({
+    name: 'x-org-id',
+    description: 'Organization ID',
+    required: true,
+  })
   @ApiOperation({
     summary: 'Get billing info',
     description: 'Get billing information (permission-based)',
@@ -227,12 +293,21 @@ export class OrganizationController {
   @OrgRequired()
   @OrgPermission({ resource: 'organization', action: 'update' })
   @ApiBearerAuth('bearer')
-  @ApiHeader({ name: 'x-org-id', description: 'Organization ID', required: true })
+  @ApiHeader({
+    name: 'x-org-id',
+    description: 'Organization ID',
+    required: true,
+  })
   @ApiOperation({
     summary: 'Update billing info',
     description: 'Update payment method (requires update permission)',
   })
-  @ApiBody({ schema: { type: 'object', properties: { paymentMethodId: { type: 'string' } } } })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { paymentMethodId: { type: 'string' } },
+    },
+  })
   @ApiResponse({ status: 201, description: 'Billing updated' })
   @ApiResponse({ status: 403, description: 'Missing permission' })
   updateOrganizationBilling(
@@ -253,12 +328,22 @@ export class OrganizationController {
   @OrgRoles(['owner', 'admin'])
   @OrgPermission({ resource: 'invitation', action: 'create' })
   @ApiBearerAuth('bearer')
-  @ApiHeader({ name: 'x-org-id', description: 'Organization ID', required: true })
+  @ApiHeader({
+    name: 'x-org-id',
+    description: 'Organization ID',
+    required: true,
+  })
   @ApiOperation({
     summary: 'Invite member',
-    description: 'Invite a new member (owner/admin + invitation:create permission)',
+    description:
+      'Invite a new member (owner/admin + invitation:create permission)',
   })
-  @ApiBody({ schema: { type: 'object', properties: { email: { type: 'string' }, role: { type: 'string' } } } })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { email: { type: 'string' }, role: { type: 'string' } },
+    },
+  })
   @ApiResponse({ status: 201, description: 'Invitation sent' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   inviteMember(
@@ -282,7 +367,11 @@ export class OrganizationController {
   @OrgRequired()
   @OrgRoles(['owner'])
   @ApiBearerAuth('bearer')
-  @ApiHeader({ name: 'x-org-id', description: 'Organization ID', required: true })
+  @ApiHeader({
+    name: 'x-org-id',
+    description: 'Organization ID',
+    required: true,
+  })
   @ApiParam({ name: 'memberId', description: 'Member ID to remove' })
   @ApiOperation({
     summary: 'Remove member',
@@ -309,12 +398,22 @@ export class OrganizationController {
   @OrgRoles(['owner', 'admin'])
   @OrgPermission({ resource: 'organization', action: 'update' })
   @ApiBearerAuth('bearer')
-  @ApiHeader({ name: 'x-org-id', description: 'Organization ID', required: true })
+  @ApiHeader({
+    name: 'x-org-id',
+    description: 'Organization ID',
+    required: true,
+  })
   @ApiOperation({
     summary: 'Create project',
-    description: 'Create a project within organization (admin+ with update permission)',
+    description:
+      'Create a project within organization (admin+ with update permission)',
   })
-  @ApiBody({ schema: { type: 'object', properties: { name: { type: 'string' }, description: { type: 'string' } } } })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { name: { type: 'string' }, description: { type: 'string' } },
+    },
+  })
   @ApiResponse({ status: 201, description: 'Project created' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   createProject(
@@ -339,7 +438,11 @@ export class OrganizationController {
   @OrgRequired()
   @OrgRoles(['owner'])
   @ApiBearerAuth('bearer')
-  @ApiHeader({ name: 'x-org-id', description: 'Organization ID', required: true })
+  @ApiHeader({
+    name: 'x-org-id',
+    description: 'Organization ID',
+    required: true,
+  })
   @ApiOperation({
     summary: 'Delete organization',
     description: 'Delete organization (owner only)',
@@ -356,7 +459,9 @@ export class OrganizationController {
       note: 'Organization will be permanently deleted in 30 days',
       organization: org.name,
       deletedBy: user.email,
-      scheduledDeletionDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      scheduledDeletionDate: new Date(
+        Date.now() + 30 * 24 * 60 * 60 * 1000,
+      ).toISOString(),
     };
   }
 
@@ -368,7 +473,11 @@ export class OrganizationController {
   @OrgRequired()
   @OrgRoles(['owner', 'admin', 'billing'], { mode: 'any' })
   @ApiBearerAuth('bearer')
-  @ApiHeader({ name: 'x-org-id', description: 'Organization ID', required: true })
+  @ApiHeader({
+    name: 'x-org-id',
+    description: 'Organization ID',
+    required: true,
+  })
   @ApiOperation({
     summary: 'Any role check',
     description: 'Requires ANY of: owner, admin, or billing role',
@@ -390,7 +499,11 @@ export class OrganizationController {
   @OrgRequired()
   @OrgRoles(['admin', 'billing'], { mode: 'all' })
   @ApiBearerAuth('bearer')
-  @ApiHeader({ name: 'x-org-id', description: 'Organization ID', required: true })
+  @ApiHeader({
+    name: 'x-org-id',
+    description: 'Organization ID',
+    required: true,
+  })
   @ApiOperation({
     summary: 'All roles check',
     description: 'Requires ALL of: admin AND billing roles',
@@ -410,15 +523,24 @@ export class OrganizationController {
 
   @Get('current/owner-only')
   @OrgRequired()
-  @OrgRoles(['owner'], { message: 'Only organization owners can access this resource' })
+  @OrgRoles(['owner'], {
+    message: 'Only organization owners can access this resource',
+  })
   @ApiBearerAuth('bearer')
-  @ApiHeader({ name: 'x-org-id', description: 'Organization ID', required: true })
+  @ApiHeader({
+    name: 'x-org-id',
+    description: 'Organization ID',
+    required: true,
+  })
   @ApiOperation({
     summary: 'Owner only',
     description: 'Owner role required with custom error message',
   })
   @ApiResponse({ status: 200, description: 'Owner section' })
-  @ApiResponse({ status: 403, description: 'Only organization owners can access this resource' })
+  @ApiResponse({
+    status: 403,
+    description: 'Only organization owners can access this resource',
+  })
   ownerOnly(
     @CurrentOrg() org: Organization,
     @OrgMember() member: OrganizationMember,
@@ -427,7 +549,11 @@ export class OrganizationController {
       message: 'Owner-only section',
       organization: org.name,
       yourRole: member.role,
-      ownerActions: ['Transfer ownership', 'Delete organization', 'Manage billing'],
+      ownerActions: [
+        'Transfer ownership',
+        'Delete organization',
+        'Manage billing',
+      ],
     };
   }
 
@@ -435,7 +561,11 @@ export class OrganizationController {
   @OrgRequired()
   @OrgPermission({ resource: 'member', action: 'create' })
   @ApiBearerAuth('bearer')
-  @ApiHeader({ name: 'x-org-id', description: 'Organization ID', required: true })
+  @ApiHeader({
+    name: 'x-org-id',
+    description: 'Organization ID',
+    required: true,
+  })
   @ApiOperation({
     summary: 'Check member management permission',
     description: 'Requires member:create permission',
@@ -457,11 +587,16 @@ export class OrganizationController {
   @OrgRequired()
   @OrgPermission({ resource: 'invitation', action: 'delete' })
   @ApiBearerAuth('bearer')
-  @ApiHeader({ name: 'x-org-id', description: 'Organization ID', required: true })
+  @ApiHeader({
+    name: 'x-org-id',
+    description: 'Organization ID',
+    required: true,
+  })
   @ApiParam({ name: 'inviteId', description: 'Invitation ID' })
   @ApiOperation({
     summary: 'Cancel invitation',
-    description: 'Cancel pending invitation (requires invitation:delete permission)',
+    description:
+      'Cancel pending invitation (requires invitation:delete permission)',
   })
   @ApiResponse({ status: 200, description: 'Invitation cancelled' })
   @ApiResponse({ status: 403, description: 'Missing permission' })
@@ -484,12 +619,24 @@ export class OrganizationController {
   @OrgRoles(['owner', 'admin'])
   @OrgPermission({ resource: 'organization', action: 'read' })
   @ApiBearerAuth('bearer')
-  @ApiHeader({ name: 'x-org-id', description: 'Organization ID', required: true })
+  @ApiHeader({
+    name: 'x-org-id',
+    description: 'Organization ID',
+    required: true,
+  })
   @ApiOperation({
     summary: 'Export audit logs',
     description: 'Export organization audit logs (admin+ with read permission)',
   })
-  @ApiBody({ schema: { type: 'object', properties: { startDate: { type: 'string' }, endDate: { type: 'string' } } } })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        startDate: { type: 'string' },
+        endDate: { type: 'string' },
+      },
+    },
+  })
   @ApiResponse({ status: 201, description: 'Export initiated' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   exportAuditLogs(
@@ -512,7 +659,11 @@ export class OrganizationController {
   @OrgRequired()
   @OrgPermission({ resource: 'organization', action: 'read' })
   @ApiBearerAuth('bearer')
-  @ApiHeader({ name: 'x-org-id', description: 'Organization ID', required: true })
+  @ApiHeader({
+    name: 'x-org-id',
+    description: 'Organization ID',
+    required: true,
+  })
   @ApiOperation({
     summary: 'Get organization analytics',
     description: 'View organization analytics (requires organization:read)',
@@ -542,12 +693,21 @@ export class OrganizationController {
   @OrgRequired()
   @OrgRoles(['owner', 'admin'])
   @ApiBearerAuth('bearer')
-  @ApiHeader({ name: 'x-org-id', description: 'Organization ID', required: true })
+  @ApiHeader({
+    name: 'x-org-id',
+    description: 'Organization ID',
+    required: true,
+  })
   @ApiOperation({
     summary: 'Create team',
     description: 'Create a team within the organization (admin+)',
   })
-  @ApiBody({ schema: { type: 'object', properties: { name: { type: 'string' }, description: { type: 'string' } } } })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { name: { type: 'string' }, description: { type: 'string' } },
+    },
+  })
   @ApiResponse({ status: 201, description: 'Team created' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   createTeam(
@@ -573,13 +733,20 @@ export class OrganizationController {
   @OrgRoles(['owner'])
   @OrgPermission({ resource: 'member', action: 'update' })
   @ApiBearerAuth('bearer')
-  @ApiHeader({ name: 'x-org-id', description: 'Organization ID', required: true })
+  @ApiHeader({
+    name: 'x-org-id',
+    description: 'Organization ID',
+    required: true,
+  })
   @ApiParam({ name: 'memberId', description: 'Member ID' })
   @ApiOperation({
     summary: 'Update member role',
-    description: 'Update member role (owner only with member:update permission)',
+    description:
+      'Update member role (owner only with member:update permission)',
   })
-  @ApiBody({ schema: { type: 'object', properties: { newRole: { type: 'string' } } } })
+  @ApiBody({
+    schema: { type: 'object', properties: { newRole: { type: 'string' } } },
+  })
   @ApiResponse({ status: 201, description: 'Role updated' })
   @ApiResponse({ status: 403, description: 'Owner role required' })
   updateMemberRole(

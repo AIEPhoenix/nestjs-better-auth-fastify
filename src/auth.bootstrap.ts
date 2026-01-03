@@ -108,6 +108,8 @@ export class AuthBootstrapService implements OnModuleInit {
         providerInstance,
       ) as Record<string, HookHandler>;
       const methods = this.metadataScanner.getAllMethodNames(providerPrototype);
+      // Get provider name from metatype (guaranteed to exist by filter above)
+      const providerName = provider.metatype?.name ?? 'UnknownProvider';
 
       for (const method of methods) {
         const providerMethod = providerPrototype[method];
@@ -116,7 +118,7 @@ export class AuthBootstrapService implements OnModuleInit {
             providerMethod,
             providerInstance,
             authOptions.hooks,
-            provider.name ?? 'UnknownProvider',
+            providerName,
             method,
           );
         }
