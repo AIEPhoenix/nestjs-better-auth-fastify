@@ -177,7 +177,10 @@ export class UserController {
     },
   })
   @ApiResponse({ status: 201, description: 'Password change initiated' })
-  @ApiResponse({ status: 401, description: 'Unauthorized or session not fresh' })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized or session not fresh',
+  })
   changePassword(
     @CurrentUser() user: UserSession['user'],
     @Body() body: { currentPassword: string; newPassword: string },
@@ -246,9 +249,12 @@ export class UserController {
   @ApiBearerAuth('bearer')
   @ApiOperation({
     summary: 'Perform sensitive action',
-    description: 'Requires: admin/moderator role + permission + fresh session + no impersonation',
+    description:
+      'Requires: admin/moderator role + permission + fresh session + no impersonation',
   })
-  @ApiBody({ schema: { type: 'object', properties: { action: { type: 'string' } } } })
+  @ApiBody({
+    schema: { type: 'object', properties: { action: { type: 'string' } } },
+  })
   @ApiResponse({ status: 201, description: 'Action executed' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
@@ -336,7 +342,10 @@ export class UserController {
   }
 
   @Get('premium-content')
-  @Roles(['premium', 'vip'], { mode: 'any', message: 'Premium subscription required' })
+  @Roles(['premium', 'vip'], {
+    mode: 'any',
+    message: 'Premium subscription required',
+  })
   @ApiBearerAuth('bearer')
   @ApiOperation({
     summary: 'Get premium content',
@@ -394,7 +403,9 @@ export class UserController {
     summary: 'Publish post',
     description: 'Requires both write:posts and publish:posts permissions',
   })
-  @ApiBody({ schema: { type: 'object', properties: { title: { type: 'string' } } } })
+  @ApiBody({
+    schema: { type: 'object', properties: { title: { type: 'string' } } },
+  })
   @ApiResponse({ status: 201, description: 'Post published' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   publishPost(

@@ -5,7 +5,10 @@ import {
   UnauthorizedException,
   ForbiddenException,
 } from '@nestjs/common';
-import { AuthGuard, AUTH_MODULE_OPTIONS } from '@sapix/nestjs-better-auth-fastify';
+import {
+  AuthGuard,
+  AUTH_MODULE_OPTIONS,
+} from '@sapix/nestjs-better-auth-fastify';
 import type { FastifyRequest } from 'fastify';
 
 // FastifyRequest is already extended by the main package (auth.types.ts)
@@ -854,38 +857,15 @@ describe('AuthGuard', () => {
   });
 
   describe('API Key Edge Cases', () => {
-    it('should handle API key from Authorization header', async () => {
-      // Use API key format that matches default pattern: prefix_randomString
+    // Note: API keys should only be sent via dedicated headers (default: x-api-key)
+    // Custom headers can be configured via Better Auth's apiKey plugin apiKeyHeaders option
+    // NOT via Authorization: Bearer header (that's for session tokens from bearer plugin)
+
+    it('should handle API key from x-api-key header', async () => {
       const mockApiKeyRequest = {
         ...mockRequest,
         headers: {
-          authorization: 'Bearer test_abc123XYZ',
-        },
-      } as any;
-
-      mockAuth.api.verifyApiKey.mockResolvedValue({
-        valid: true,
-        key: { id: 'key-1', permissions: {} },
-      });
-
-      jest
-        .spyOn(reflector, 'getAllAndOverride')
-        .mockImplementation((key: any) => {
-          if (key === 'auth:apiKeyAuth') return {};
-          return undefined;
-        });
-
-      const context = createMockContext(mockApiKeyRequest);
-      const result = await guard.canActivate(context);
-
-      expect(result).toBe(true);
-    });
-
-    it('should handle API key from api-key header', async () => {
-      const mockApiKeyRequest = {
-        ...mockRequest,
-        headers: {
-          'api-key': 'api-key-123',
+          'x-api-key': 'api-key-123',
         },
       } as any;
 
@@ -1216,60 +1196,9 @@ describe('AuthGuard', () => {
     });
   });
 
-  describe('Session Expiration', () => {
-    it('should deny access for expired session', async () => {
-      const expiredDate = new Date();
-      expiredDate.setDate(expiredDate.getDate() - 1);
-
-      mockAuth.api.getSession.mockResolvedValue({
-        session: {
-          id: 'sess-1',
-          createdAt: new Date(),
-          expiresAt: expiredDate,
-        },
-        user: { id: 'user-1' },
-      });
-
-      jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(undefined);
-
-      const context = createMockContext();
-
-      await expect(guard.canActivate(context)).rejects.toThrow(
-        UnauthorizedException,
-      );
-    });
-
-    it('should allow access for non-expired session', async () => {
-      const futureDate = new Date();
-      futureDate.setDate(futureDate.getDate() + 1);
-
-      mockAuth.api.getSession.mockResolvedValue({
-        session: { id: 'sess-1', createdAt: new Date(), expiresAt: futureDate },
-        user: { id: 'user-1' },
-      });
-
-      jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(undefined);
-
-      const context = createMockContext();
-      const result = await guard.canActivate(context);
-
-      expect(result).toBe(true);
-    });
-
-    it('should allow access when session has no expiration', async () => {
-      mockAuth.api.getSession.mockResolvedValue({
-        session: { id: 'sess-1', createdAt: new Date() },
-        user: { id: 'user-1' },
-      });
-
-      jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(undefined);
-
-      const context = createMockContext();
-      const result = await guard.canActivate(context);
-
-      expect(result).toBe(true);
-    });
-  });
+  // Note: Session Expiration tests have been removed
+  // Better Auth's getSession API automatically handles session expiration
+  // If a session is expired, getSession returns null, so no additional check is needed
 
   describe('Role and Permission Edge Cases', () => {
     it('should reject when user has no role defined', async () => {
@@ -1392,92 +1321,13 @@ describe('AuthGuard', () => {
     });
   });
 
-  describe('Custom Configuration Options', () => {
-    describe('skipSessionExpirationCheck', () => {
-      it('should allow expired session when skipSessionExpirationCheck is true', async () => {
-        const expiredDate = new Date();
-        expiredDate.setDate(expiredDate.getDate() - 1);
+  // Note: skipSessionExpirationCheck option has been removed
+  // Better Auth's getSession API already handles session expiration automatically
+  // If a session is expired, getSession returns null
 
-        mockAuth.api.getSession.mockResolvedValue({
-          session: {
-            id: 'sess-1',
-            createdAt: new Date(),
-            expiresAt: expiredDate,
-          },
-          user: { id: 'user-1' },
-        });
-
-        jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(undefined);
-
-        // Create guard with skipSessionExpirationCheck
-        const moduleWithSkip: TestingModule = await Test.createTestingModule({
-          providers: [
-            AuthGuard,
-            Reflector,
-            {
-              provide: AUTH_MODULE_OPTIONS,
-              useValue: {
-                auth: mockAuth,
-                skipSessionExpirationCheck: true,
-              },
-            },
-          ],
-        }).compile();
-
-        const guardWithSkip = moduleWithSkip.get<AuthGuard>(AuthGuard);
-        const context = createMockContext();
-        const result = await guardWithSkip.canActivate(context);
-
-        expect(result).toBe(true);
-      });
-    });
-
-    describe('apiKeyPattern', () => {
-      it('should use custom apiKeyPattern for API key detection', async () => {
-        const mockApiKeyRequest = {
-          ...mockRequest,
-          headers: {
-            authorization: 'Bearer sk-custom-api-key-12345',
-          },
-        } as any;
-
-        mockAuth.api.verifyApiKey.mockResolvedValue({
-          valid: true,
-          key: { id: 'key-1', permissions: {} },
-        });
-
-        // Create guard with custom apiKeyPattern
-        const moduleWithPattern: TestingModule = await Test.createTestingModule(
-          {
-            providers: [
-              AuthGuard,
-              Reflector,
-              {
-                provide: AUTH_MODULE_OPTIONS,
-                useValue: {
-                  auth: mockAuth,
-                  apiKeyPattern: /^sk-[a-z-]+-[0-9]+$/,
-                },
-              },
-            ],
-          },
-        ).compile();
-
-        const guardWithPattern = moduleWithPattern.get<AuthGuard>(AuthGuard);
-        jest
-          .spyOn(moduleWithPattern.get(Reflector), 'getAllAndOverride')
-          .mockImplementation((key: any) => {
-            if (key === 'auth:apiKeyAuth') return {};
-            return undefined;
-          });
-
-        const context = createMockContext(mockApiKeyRequest);
-        const result = await guardWithPattern.canActivate(context);
-
-        expect(result).toBe(true);
-      });
-    });
-  });
+  // Note: apiKeyPattern option has been removed
+  // API keys are detected via dedicated headers only (x-api-key, api-key, etc.)
+  // The library auto-reads apiKeyHeaders config from Better Auth's apiKey plugin;
 
   describe('Organization Checks', () => {
     beforeEach(() => {

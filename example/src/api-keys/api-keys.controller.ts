@@ -24,7 +24,10 @@ import {
   CurrentUser,
   Permissions,
 } from '@sapix/nestjs-better-auth-fastify';
-import type { UserSession, ApiKeyValidation } from '@sapix/nestjs-better-auth-fastify';
+import type {
+  UserSession,
+  ApiKeyValidation,
+} from '@sapix/nestjs-better-auth-fastify';
 
 type ApiKeyInfo = NonNullable<ApiKeyValidation['key']>;
 
@@ -52,8 +55,22 @@ export class ApiKeysController {
       message: 'My API Keys',
       userId: user.id,
       apiKeys: [
-        { id: 'key-1', name: 'Production API Key', prefix: 'pk_live_', permissions: ['read:data', 'write:data'], createdAt: '2024-01-01', expiresAt: null },
-        { id: 'key-2', name: 'Development API Key', prefix: 'pk_test_', permissions: ['read:data'], createdAt: '2024-06-01', expiresAt: '2025-12-31' },
+        {
+          id: 'key-1',
+          name: 'Production API Key',
+          prefix: 'pk_live_',
+          permissions: ['read:data', 'write:data'],
+          createdAt: '2024-01-01',
+          expiresAt: null,
+        },
+        {
+          id: 'key-2',
+          name: 'Development API Key',
+          prefix: 'pk_test_',
+          permissions: ['read:data'],
+          createdAt: '2024-06-01',
+          expiresAt: '2025-12-31',
+        },
       ],
     };
   }
@@ -136,9 +153,16 @@ export class ApiKeysController {
     return {
       message: 'External API data',
       authenticatedVia: 'API Key',
-      apiKey: { id: apiKey.id, name: apiKey.name, permissions: apiKey.permissions },
+      apiKey: {
+        id: apiKey.id,
+        name: apiKey.name,
+        permissions: apiKey.permissions,
+      },
       data: {
-        items: [{ id: 1, name: 'Item 1', value: 100 }, { id: 2, name: 'Item 2', value: 200 }],
+        items: [
+          { id: 1, name: 'Item 1', value: 100 },
+          { id: 2, name: 'Item 2', value: 200 },
+        ],
         total: 2,
         timestamp: new Date().toISOString(),
       },
@@ -153,7 +177,12 @@ export class ApiKeysController {
     summary: 'Create external data',
     description: 'API Key auth + write:data permission required',
   })
-  @ApiBody({ schema: { type: 'object', properties: { name: { type: 'string' }, value: { type: 'number' } } } })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { name: { type: 'string' }, value: { type: 'number' } },
+    },
+  })
   @ApiResponse({ status: 201, description: 'Data created' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Missing permission' })
@@ -207,8 +236,17 @@ export class ApiKeysController {
     summary: 'Payment webhook',
     description: 'Webhook endpoint for payment callbacks (API Key required)',
   })
-  @ApiHeader({ name: 'x-webhook-signature', description: 'Webhook signature', required: false })
-  @ApiBody({ schema: { type: 'object', properties: { event: { type: 'string' }, data: { type: 'object' } } } })
+  @ApiHeader({
+    name: 'x-webhook-signature',
+    description: 'Webhook signature',
+    required: false,
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { event: { type: 'string' }, data: { type: 'object' } },
+    },
+  })
   @ApiResponse({ status: 201, description: 'Webhook received' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   handlePaymentWebhook(
@@ -240,8 +278,16 @@ export class ApiKeysController {
       message: 'Integration status',
       apiKey: { id: apiKey.id, name: apiKey.name },
       integrations: [
-        { name: 'Stripe', status: 'connected', lastSync: '2025-01-15T10:00:00Z' },
-        { name: 'Slack', status: 'connected', lastSync: '2025-01-15T09:30:00Z' },
+        {
+          name: 'Stripe',
+          status: 'connected',
+          lastSync: '2025-01-15T10:00:00Z',
+        },
+        {
+          name: 'Slack',
+          status: 'connected',
+          lastSync: '2025-01-15T09:30:00Z',
+        },
         { name: 'GitHub', status: 'disconnected', lastSync: null },
       ],
     };
@@ -270,7 +316,10 @@ export class ApiKeysController {
       user: apiKey
         ? { apiKeyId: apiKey.id, apiKeyName: apiKey.name }
         : { userId: user.id, email: user.email },
-      data: { timestamp: new Date().toISOString(), items: ['item1', 'item2', 'item3'] },
+      data: {
+        timestamp: new Date().toISOString(),
+        items: ['item1', 'item2', 'item3'],
+      },
     };
   }
 
@@ -280,7 +329,8 @@ export class ApiKeysController {
   @ApiBearerAuth('bearer')
   @ApiOperation({
     summary: 'Get flexible data',
-    description: 'API Key auth with session fallback (@ApiKeyAuth({ allowSession: true }))',
+    description:
+      'API Key auth with session fallback (@ApiKeyAuth({ allowSession: true }))',
   })
   @ApiResponse({ status: 200, description: 'Flexible data' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -305,7 +355,8 @@ export class ApiKeysController {
   @ApiKeyAuth({
     permissions: {
       permissions: { data: ['read', 'write', 'delete'] },
-      message: 'This endpoint requires data:read, data:write, and data:delete permissions',
+      message:
+        'This endpoint requires data:read, data:write, and data:delete permissions',
     },
   })
   @ApiSecurity('api-key')
@@ -313,7 +364,12 @@ export class ApiKeysController {
     summary: 'Batch create',
     description: 'API Key with specific permission requirements',
   })
-  @ApiBody({ schema: { type: 'object', properties: { items: { type: 'array', items: { type: 'object' } } } } })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { items: { type: 'array', items: { type: 'object' } } },
+    },
+  })
   @ApiResponse({ status: 201, description: 'Batch created' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Missing required permissions' })
@@ -344,7 +400,15 @@ export class ApiKeysController {
     summary: 'Deploy application',
     description: 'CLI endpoint for deployments (API Key required)',
   })
-  @ApiBody({ schema: { type: 'object', properties: { environment: { type: 'string' }, version: { type: 'string' } } } })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        environment: { type: 'string' },
+        version: { type: 'string' },
+      },
+    },
+  })
   @ApiResponse({ status: 201, description: 'Deployment initiated' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   deployApplication(
@@ -379,9 +443,24 @@ export class ApiKeysController {
       message: 'CI/CD pipeline status',
       requestedBy: apiKey ? { apiKeyId: apiKey.id } : { type: 'session' },
       pipelines: [
-        { id: 'pipeline-1', name: 'Build & Test', status: 'success', lastRun: '2025-01-15T10:00:00Z' },
-        { id: 'pipeline-2', name: 'Deploy to Staging', status: 'running', lastRun: '2025-01-15T11:00:00Z' },
-        { id: 'pipeline-3', name: 'Deploy to Production', status: 'pending', lastRun: null },
+        {
+          id: 'pipeline-1',
+          name: 'Build & Test',
+          status: 'success',
+          lastRun: '2025-01-15T10:00:00Z',
+        },
+        {
+          id: 'pipeline-2',
+          name: 'Deploy to Staging',
+          status: 'running',
+          lastRun: '2025-01-15T11:00:00Z',
+        },
+        {
+          id: 'pipeline-3',
+          name: 'Deploy to Production',
+          status: 'pending',
+          lastRun: null,
+        },
       ],
     };
   }
@@ -394,7 +473,10 @@ export class ApiKeysController {
     summary: 'Get rate-limited data',
     description: 'Endpoint with different rate limits based on auth method',
   })
-  @ApiResponse({ status: 200, description: 'Rate-limited data with limit info' })
+  @ApiResponse({
+    status: 200,
+    description: 'Rate-limited data with limit info',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   getRateLimitedData(@ApiKey() apiKey: ApiKeyInfo | null) {
     const rateLimitInfo = apiKey

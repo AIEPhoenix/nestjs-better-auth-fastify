@@ -414,10 +414,11 @@ export const BearerAuth = (): CustomDecorator<string> =>
  *
  * Client usage:
  * ```bash
- * curl -H "X-API-Key: <api-key>" /api/external
- * # or
- * curl -H "Authorization: Bearer <api-key>" /api/external
+ * curl -H "x-api-key: <api-key>" /api/external
  * ```
+ *
+ * Note: API keys must be sent via dedicated headers (default: x-api-key).
+ * Custom headers can be configured via Better Auth's apiKey plugin apiKeyHeaders option.
  *
  * @see https://www.better-auth.com/docs/plugins/api-key
  */
@@ -657,10 +658,16 @@ export function getRequestFromContext(ctx: ExecutionContext): FastifyRequest {
     const client = wsContext.getClient<{ handshake?: WsData['handshake'] }>();
     if (client?.handshake?.headers) {
       // Create a minimal request-like object from handshake
+      // Note: This is a limited fallback for WebSocket contexts
       return {
         headers: client.handshake.headers,
         session: null,
         user: null,
+        apiKey: null,
+        organization: null,
+        organizationMember: null,
+        isImpersonating: false,
+        impersonatedBy: null,
       } as unknown as FastifyRequest;
     }
 

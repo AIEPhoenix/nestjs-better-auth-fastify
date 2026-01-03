@@ -63,8 +63,18 @@ export class AdminController {
       requestedBy: admin.email,
       users: [
         { id: '1', email: 'user1@example.com', name: 'User One', role: 'user' },
-        { id: '2', email: 'user2@example.com', name: 'User Two', role: 'moderator' },
-        { id: '3', email: 'admin@example.com', name: 'Admin User', role: 'admin' },
+        {
+          id: '2',
+          email: 'user2@example.com',
+          name: 'User Two',
+          role: 'moderator',
+        },
+        {
+          id: '3',
+          email: 'admin@example.com',
+          name: 'Admin User',
+          role: 'admin',
+        },
       ],
     };
   }
@@ -104,7 +114,9 @@ export class AdminController {
     description: 'Ban a user - disallowed during impersonation',
   })
   @ApiParam({ name: 'id', description: 'User ID to ban' })
-  @ApiBody({ schema: { type: 'object', properties: { reason: { type: 'string' } } } })
+  @ApiBody({
+    schema: { type: 'object', properties: { reason: { type: 'string' } } },
+  })
   @ApiResponse({ status: 201, description: 'User banned' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   banUser(
@@ -148,7 +160,8 @@ export class AdminController {
   @Permissions(['delete:users'])
   @ApiOperation({
     summary: 'Delete user',
-    description: 'Highly sensitive - requires @SecureAdminOnly (admin + fresh session + no impersonation)',
+    description:
+      'Highly sensitive - requires @SecureAdminOnly (admin + fresh session + no impersonation)',
   })
   @ApiParam({ name: 'id', description: 'User ID to delete' })
   @ApiResponse({ status: 200, description: 'User deleted' })
@@ -223,9 +236,28 @@ export class AdminController {
       message: 'Audit logs',
       requestedBy: admin.email,
       logs: [
-        { id: '1', action: 'user.login', userId: 'user-123', timestamp: '2025-01-15T10:00:00Z', ip: '192.168.1.1' },
-        { id: '2', action: 'user.update', userId: 'user-456', timestamp: '2025-01-15T11:00:00Z', ip: '192.168.1.2' },
-        { id: '3', action: 'admin.ban_user', userId: 'user-789', adminId: 'admin-001', timestamp: '2025-01-15T12:00:00Z', ip: '192.168.1.3' },
+        {
+          id: '1',
+          action: 'user.login',
+          userId: 'user-123',
+          timestamp: '2025-01-15T10:00:00Z',
+          ip: '192.168.1.1',
+        },
+        {
+          id: '2',
+          action: 'user.update',
+          userId: 'user-456',
+          timestamp: '2025-01-15T11:00:00Z',
+          ip: '192.168.1.2',
+        },
+        {
+          id: '3',
+          action: 'admin.ban_user',
+          userId: 'user-789',
+          adminId: 'admin-001',
+          timestamp: '2025-01-15T12:00:00Z',
+          ip: '192.168.1.3',
+        },
       ],
     };
   }
