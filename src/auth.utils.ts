@@ -175,39 +175,15 @@ export async function writeWebResponseToReply(
   }
 }
 
-// Cached normalized base paths to avoid repeated string operations
-const normalizedPathCache = new Map<string, string>();
-
-/**
- * Normalize basePath to ensure correct format
- *
- * Performance: Caches normalized paths
- *
- * @param basePath - Original basePath
- * @returns Normalized basePath (starts with /, does not end with /)
- */
 export function normalizeBasePath(basePath: string): string {
-  // Check cache first
-  const cached = normalizedPathCache.get(basePath);
-  if (cached !== undefined) {
-    return cached;
-  }
-
   let normalized = basePath;
 
-  // Ensure starts with /
   if (normalized[0] !== '/') {
     normalized = '/' + normalized;
   }
 
-  // Ensure does not end with /
   if (normalized.length > 1 && normalized[normalized.length - 1] === '/') {
     normalized = normalized.slice(0, -1);
-  }
-
-  // Cache the result (limit cache size to prevent memory leaks)
-  if (normalizedPathCache.size < 100) {
-    normalizedPathCache.set(basePath, normalized);
   }
 
   return normalized;

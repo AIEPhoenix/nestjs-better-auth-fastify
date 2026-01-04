@@ -1494,4 +1494,680 @@ describe('AuthGuard', () => {
       );
     });
   });
+
+  describe('API Key Headers from Plugin Config', () => {
+    it('should read apiKeyHeaders from api-key plugin config', async () => {
+      const moduleWithPlugin = await Test.createTestingModule({
+        providers: [
+          AuthGuard,
+          Reflector,
+          {
+            provide: AUTH_MODULE_OPTIONS,
+            useValue: {
+              auth: {
+                ...mockAuth,
+                options: {
+                  plugins: [
+                    {
+                      id: 'api-key',
+                      apiKeyHeaders: ['custom-api-key'],
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        ],
+      }).compile();
+
+      const guardWithPlugin = moduleWithPlugin.get<AuthGuard>(AuthGuard);
+      const reflectorWithPlugin = moduleWithPlugin.get<Reflector>(Reflector);
+
+      const mockApiKeyRequest = {
+        ...mockRequest,
+        headers: {
+          'custom-api-key': 'test-key',
+        },
+      } as any;
+
+      mockAuth.api.verifyApiKey.mockResolvedValue({
+        valid: true,
+        key: { id: 'key-1', permissions: {} },
+      });
+
+      jest
+        .spyOn(reflectorWithPlugin, 'getAllAndOverride')
+        .mockImplementation((key: any) => {
+          if (key === 'auth:apiKeyAuth') return {};
+          return undefined;
+        });
+
+      const context = {
+        getType: jest.fn().mockReturnValue('http'),
+        getHandler: jest.fn().mockReturnValue(() => {}),
+        getClass: jest.fn().mockReturnValue(class {}),
+        switchToHttp: jest.fn().mockReturnValue({
+          getRequest: jest.fn().mockReturnValue(mockApiKeyRequest),
+        }),
+      } as unknown as ExecutionContext;
+
+      const result = await guardWithPlugin.canActivate(context);
+      expect(result).toBe(true);
+    });
+
+    it('should read apiKeyHeaders as string from plugin config', async () => {
+      const moduleWithPlugin = await Test.createTestingModule({
+        providers: [
+          AuthGuard,
+          Reflector,
+          {
+            provide: AUTH_MODULE_OPTIONS,
+            useValue: {
+              auth: {
+                ...mockAuth,
+                options: {
+                  plugins: [
+                    {
+                      id: 'apiKey',
+                      options: {
+                        apiKeyHeaders: 'x-custom-key',
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        ],
+      }).compile();
+
+      const guardWithPlugin = moduleWithPlugin.get<AuthGuard>(AuthGuard);
+      const reflectorWithPlugin = moduleWithPlugin.get<Reflector>(Reflector);
+
+      const mockApiKeyRequest = {
+        ...mockRequest,
+        headers: {
+          'x-custom-key': 'test-key',
+        },
+      } as any;
+
+      mockAuth.api.verifyApiKey.mockResolvedValue({
+        valid: true,
+        key: { id: 'key-1', permissions: {} },
+      });
+
+      jest
+        .spyOn(reflectorWithPlugin, 'getAllAndOverride')
+        .mockImplementation((key: any) => {
+          if (key === 'auth:apiKeyAuth') return {};
+          return undefined;
+        });
+
+      const context = {
+        getType: jest.fn().mockReturnValue('http'),
+        getHandler: jest.fn().mockReturnValue(() => {}),
+        getClass: jest.fn().mockReturnValue(class {}),
+        switchToHttp: jest.fn().mockReturnValue({
+          getRequest: jest.fn().mockReturnValue(mockApiKeyRequest),
+        }),
+      } as unknown as ExecutionContext;
+
+      const result = await guardWithPlugin.canActivate(context);
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('Organization Edge Cases', () => {
+    it('should return null when user is not a member of the organization', async () => {
+      mockAuth.api.getSession.mockResolvedValue({
+        session: {
+          id: 'sess-1',
+          createdAt: new Date(),
+          activeOrganizationId: 'org-1',
+        },
+        user: { id: 'user-2' }, // Different user
+      });
+
+      mockAuth.api.getFullOrganization = jest.fn().mockResolvedValue({
+        organization: { id: 'org-1', name: 'Test Org' },
+        members: [
+          {
+            userId: 'user-1', // Only user-1 is a member
+            role: 'admin',
+            id: 'member-1',
+            organizationId: 'org-1',
+          },
+        ],
+      });
+
+      jest
+        .spyOn(reflector, 'getAllAndOverride')
+        .mockImplementation((key: any) => {
+          if (key === 'auth:orgRequired') return true;
+          return undefined;
+        });
+
+      const context = createMockContext();
+
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('should handle organization API error gracefully', async () => {
+      mockAuth.api.getSession.mockResolvedValue({
+        session: {
+          id: 'sess-1',
+          createdAt: new Date(),
+          activeOrganizationId: 'org-1',
+        },
+        user: { id: 'user-1' },
+      });
+
+      mockAuth.api.getFullOrganization = jest
+        .fn()
+        .mockRejectedValue(new Error('API Error'));
+
+      jest
+        .spyOn(reflector, 'getAllAndOverride')
+        .mockImplementation((key: any) => {
+          if (key === 'auth:orgRequired') return true;
+          return undefined;
+        });
+
+      const context = createMockContext();
+
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('should handle organization API returning null', async () => {
+      mockAuth.api.getSession.mockResolvedValue({
+        session: {
+          id: 'sess-1',
+          createdAt: new Date(),
+          activeOrganizationId: 'org-1',
+        },
+        user: { id: 'user-1' },
+      });
+
+      mockAuth.api.getFullOrganization = jest.fn().mockResolvedValue(null);
+
+      jest
+        .spyOn(reflector, 'getAllAndOverride')
+        .mockImplementation((key: any) => {
+          if (key === 'auth:orgRequired') return true;
+          return undefined;
+        });
+
+      const context = createMockContext();
+
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('should use x-organization-id header when session has no activeOrganizationId', async () => {
+      mockAuth.api.getSession.mockResolvedValue({
+        session: { id: 'sess-1', createdAt: new Date() },
+        user: { id: 'user-1' },
+      });
+
+      const mockRequestWithOrgHeader = {
+        ...mockRequest,
+        headers: {
+          ...mockRequest.headers,
+          'x-organization-id': 'org-from-header',
+        },
+      } as any;
+
+      mockAuth.api.getFullOrganization = jest.fn().mockResolvedValue({
+        organization: { id: 'org-from-header', name: 'Test Org' },
+        members: [
+          {
+            userId: 'user-1',
+            role: 'admin',
+            id: 'member-1',
+            organizationId: 'org-from-header',
+          },
+        ],
+      });
+
+      jest
+        .spyOn(reflector, 'getAllAndOverride')
+        .mockImplementation((key: any) => {
+          if (key === 'auth:orgRequired') return true;
+          return undefined;
+        });
+
+      const context = createMockContext(mockRequestWithOrgHeader);
+      const result = await guard.canActivate(context);
+
+      expect(result).toBe(true);
+      expect(mockAuth.api.getFullOrganization).toHaveBeenCalledWith(
+        expect.objectContaining({ organizationId: 'org-from-header' }),
+      );
+    });
+  });
+
+  describe('Organization Roles and Permissions Edge Cases', () => {
+    beforeEach(() => {
+      mockAuth.api.getSession.mockResolvedValue({
+        session: {
+          id: 'sess-1',
+          createdAt: new Date(),
+          activeOrganizationId: 'org-1',
+        },
+        user: { id: 'user-1' },
+      });
+    });
+
+    it('should check OrgRoles with mode=all', async () => {
+      mockAuth.api.getFullOrganization = jest.fn().mockResolvedValue({
+        organization: { id: 'org-1', name: 'Test Org' },
+        members: [
+          {
+            userId: 'user-1',
+            role: 'admin,billing',
+            id: 'member-1',
+            organizationId: 'org-1',
+          },
+        ],
+      });
+
+      jest
+        .spyOn(reflector, 'getAllAndOverride')
+        .mockImplementation((key: any) => {
+          if (key === 'auth:orgRoles') {
+            return { roles: ['admin', 'billing'], options: { mode: 'all' } };
+          }
+          return undefined;
+        });
+
+      const context = createMockContext();
+      const result = await guard.canActivate(context);
+
+      expect(result).toBe(true);
+    });
+
+    it('should reject OrgRoles with mode=all when missing role', async () => {
+      mockAuth.api.getFullOrganization = jest.fn().mockResolvedValue({
+        organization: { id: 'org-1', name: 'Test Org' },
+        members: [
+          {
+            userId: 'user-1',
+            role: 'admin',
+            id: 'member-1',
+            organizationId: 'org-1',
+          },
+        ],
+      });
+
+      jest
+        .spyOn(reflector, 'getAllAndOverride')
+        .mockImplementation((key: any) => {
+          if (key === 'auth:orgRoles') {
+            return { roles: ['admin', 'billing'], options: { mode: 'all' } };
+          }
+          return undefined;
+        });
+
+      const context = createMockContext();
+
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('should check OrgPermission with action array and mode=all', async () => {
+      mockAuth.api.getFullOrganization = jest.fn().mockResolvedValue({
+        organization: { id: 'org-1', name: 'Test Org' },
+        members: [
+          {
+            userId: 'user-1',
+            role: 'admin',
+            id: 'member-1',
+            organizationId: 'org-1',
+          },
+        ],
+      });
+
+      jest
+        .spyOn(reflector, 'getAllAndOverride')
+        .mockImplementation((key: any) => {
+          if (key === 'auth:orgPermissions') {
+            return {
+              options: {
+                resource: 'member',
+                action: ['read', 'create', 'update'],
+                mode: 'all',
+              },
+            };
+          }
+          return undefined;
+        });
+
+      const context = createMockContext();
+      const result = await guard.canActivate(context);
+
+      expect(result).toBe(true);
+    });
+
+    it('should reject OrgPermission when role not in permissions config', async () => {
+      mockAuth.api.getFullOrganization = jest.fn().mockResolvedValue({
+        organization: { id: 'org-1', name: 'Test Org' },
+        members: [
+          {
+            userId: 'user-1',
+            role: 'unknown_role',
+            id: 'member-1',
+            organizationId: 'org-1',
+          },
+        ],
+      });
+
+      jest
+        .spyOn(reflector, 'getAllAndOverride')
+        .mockImplementation((key: any) => {
+          if (key === 'auth:orgPermissions') {
+            return { options: { resource: 'member', action: 'read' } };
+          }
+          return undefined;
+        });
+
+      const context = createMockContext();
+
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('should reject OrgPermission when resource not in role permissions', async () => {
+      mockAuth.api.getFullOrganization = jest.fn().mockResolvedValue({
+        organization: { id: 'org-1', name: 'Test Org' },
+        members: [
+          {
+            userId: 'user-1',
+            role: 'member',
+            id: 'member-1',
+            organizationId: 'org-1',
+          },
+        ],
+      });
+
+      jest
+        .spyOn(reflector, 'getAllAndOverride')
+        .mockImplementation((key: any) => {
+          if (key === 'auth:orgPermissions') {
+            return {
+              options: { resource: 'unknown_resource', action: 'read' },
+            };
+          }
+          return undefined;
+        });
+
+      const context = createMockContext();
+
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('should allow access when role has "all" permission for resource', async () => {
+      mockAuth.api.getFullOrganization = jest.fn().mockResolvedValue({
+        organization: { id: 'org-1', name: 'Test Org' },
+        members: [
+          {
+            userId: 'user-1',
+            role: 'owner',
+            id: 'member-1',
+            organizationId: 'org-1',
+          },
+        ],
+      });
+
+      jest
+        .spyOn(reflector, 'getAllAndOverride')
+        .mockImplementation((key: any) => {
+          if (key === 'auth:orgPermissions') {
+            return {
+              options: {
+                resource: 'organization',
+                action: ['read', 'update', 'delete'],
+              },
+            };
+          }
+          return undefined;
+        });
+
+      const context = createMockContext();
+      const result = await guard.canActivate(context);
+
+      expect(result).toBe(true);
+    });
+
+    it('should use nested organization.getFullOrganization API', async () => {
+      mockAuth.api.getFullOrganization = undefined;
+      mockAuth.api.organization = {
+        getFullOrganization: jest.fn().mockResolvedValue({
+          organization: { id: 'org-1', name: 'Test Org' },
+          members: [
+            {
+              userId: 'user-1',
+              role: 'admin',
+              id: 'member-1',
+              organizationId: 'org-1',
+            },
+          ],
+        }),
+      };
+
+      jest
+        .spyOn(reflector, 'getAllAndOverride')
+        .mockImplementation((key: any) => {
+          if (key === 'auth:orgRequired') return true;
+          return undefined;
+        });
+
+      const context = createMockContext();
+      const result = await guard.canActivate(context);
+
+      expect(result).toBe(true);
+      expect(mockAuth.api.organization.getFullOrganization).toHaveBeenCalled();
+    });
+  });
+
+  describe('Debug Mode', () => {
+    it('should log warning when org API not available in debug mode', async () => {
+      const moduleWithDebug = await Test.createTestingModule({
+        providers: [
+          AuthGuard,
+          Reflector,
+          {
+            provide: AUTH_MODULE_OPTIONS,
+            useValue: {
+              auth: {
+                api: {
+                  getSession: jest.fn().mockResolvedValue({
+                    session: {
+                      id: 'sess-1',
+                      createdAt: new Date(),
+                      activeOrganizationId: 'org-1',
+                    },
+                    user: { id: 'user-1' },
+                  }),
+                },
+                options: {},
+              },
+              debug: true,
+            },
+          },
+        ],
+      }).compile();
+
+      const guardWithDebug = moduleWithDebug.get<AuthGuard>(AuthGuard);
+      const reflectorWithDebug = moduleWithDebug.get<Reflector>(Reflector);
+
+      jest
+        .spyOn(reflectorWithDebug, 'getAllAndOverride')
+        .mockImplementation((key: any) => {
+          if (key === 'auth:orgRequired') return true;
+          return undefined;
+        });
+
+      const context = {
+        getType: jest.fn().mockReturnValue('http'),
+        getHandler: jest.fn().mockReturnValue(() => {}),
+        getClass: jest.fn().mockReturnValue(class {}),
+        switchToHttp: jest.fn().mockReturnValue({
+          getRequest: jest.fn().mockReturnValue({
+            headers: { cookie: 'session=test' },
+            session: null,
+            user: null,
+          }),
+        }),
+      } as unknown as ExecutionContext;
+
+      await expect(guardWithDebug.canActivate(context)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+  });
+
+  describe('Custom Error Messages', () => {
+    it('should use custom error messages when provided', async () => {
+      const moduleWithCustomMessages = await Test.createTestingModule({
+        providers: [
+          AuthGuard,
+          Reflector,
+          {
+            provide: AUTH_MODULE_OPTIONS,
+            useValue: {
+              auth: {
+                api: {
+                  getSession: jest.fn().mockResolvedValue(null),
+                },
+              },
+              errorMessages: {
+                unauthorized: 'Custom unauthorized message',
+              },
+            },
+          },
+        ],
+      }).compile();
+
+      const guardWithCustom =
+        moduleWithCustomMessages.get<AuthGuard>(AuthGuard);
+      const reflectorWithCustom =
+        moduleWithCustomMessages.get<Reflector>(Reflector);
+
+      jest
+        .spyOn(reflectorWithCustom, 'getAllAndOverride')
+        .mockReturnValue(undefined);
+
+      const context = {
+        getType: jest.fn().mockReturnValue('http'),
+        getHandler: jest.fn().mockReturnValue(() => {}),
+        getClass: jest.fn().mockReturnValue(class {}),
+        switchToHttp: jest.fn().mockReturnValue({
+          getRequest: jest.fn().mockReturnValue({
+            headers: {},
+            session: null,
+            user: null,
+          }),
+        }),
+      } as unknown as ExecutionContext;
+
+      await expect(guardWithCustom.canActivate(context)).rejects.toThrow(
+        'Custom unauthorized message',
+      );
+    });
+  });
+
+  describe('Roles with Array Type', () => {
+    it('should handle user role as array', async () => {
+      mockAuth.api.getSession.mockResolvedValue({
+        session: { id: 'sess-1', createdAt: new Date() },
+        user: { id: 'user-1', role: ['admin', 'moderator'] },
+      });
+
+      jest
+        .spyOn(reflector, 'getAllAndOverride')
+        .mockImplementation((key: any) => {
+          if (key === 'auth:roles') {
+            return { roles: ['admin'], options: { mode: 'any' } };
+          }
+          return undefined;
+        });
+
+      const context = createMockContext();
+      const result = await guard.canActivate(context);
+
+      expect(result).toBe(true);
+    });
+
+    it('should handle organization member role as array', async () => {
+      mockAuth.api.getSession.mockResolvedValue({
+        session: {
+          id: 'sess-1',
+          createdAt: new Date(),
+          activeOrganizationId: 'org-1',
+        },
+        user: { id: 'user-1' },
+      });
+
+      mockAuth.api.getFullOrganization = jest.fn().mockResolvedValue({
+        organization: { id: 'org-1', name: 'Test Org' },
+        members: [
+          {
+            userId: 'user-1',
+            role: ['admin', 'billing'],
+            id: 'member-1',
+            organizationId: 'org-1',
+          },
+        ],
+      });
+
+      jest
+        .spyOn(reflector, 'getAllAndOverride')
+        .mockImplementation((key: any) => {
+          if (key === 'auth:orgRoles') {
+            return { roles: ['billing'], options: { mode: 'any' } };
+          }
+          return undefined;
+        });
+
+      const context = createMockContext();
+      const result = await guard.canActivate(context);
+
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('Permissions with String Type', () => {
+    it('should handle user permissions as comma-separated string', async () => {
+      mockAuth.api.getSession.mockResolvedValue({
+        session: { id: 'sess-1', createdAt: new Date() },
+        user: {
+          id: 'user-1',
+          permissions: 'read:users, write:users, delete:users',
+        },
+      });
+
+      jest
+        .spyOn(reflector, 'getAllAndOverride')
+        .mockImplementation((key: any) => {
+          if (key === 'auth:permissions') {
+            return { permissions: ['write:users'], options: { mode: 'any' } };
+          }
+          return undefined;
+        });
+
+      const context = createMockContext();
+      const result = await guard.canActivate(context);
+
+      expect(result).toBe(true);
+    });
+  });
 });

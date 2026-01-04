@@ -245,10 +245,10 @@ function createError(
 }
 
 // ============================================
-// Metadata Cache - Performance optimization
+// Metadata Types
 // ============================================
 
-interface CachedMetadata {
+interface Metadata {
   isPublic?: boolean;
   isOptional?: boolean;
   apiKeyAuth?: ApiKeyAuthMetadata;
@@ -326,20 +326,10 @@ const DEFAULT_API_KEY_HEADERS = ['x-api-key'];
  * - @OrgRoles(['owner', 'admin']) - Organization role validation
  * - @OrgPermission({ resource, action }) - Organization permission validation
  *
- * Performance optimizations:
- * - Metadata caching per handler
- * - Lazy evaluation of checks
- * - Early returns for common cases
  */
 @Injectable()
 export class AuthGuard implements CanActivate {
   private readonly logger = new Logger(AuthGuard.name);
-
-  /** Metadata cache - WeakMap for automatic cleanup */
-  private readonly metadataCache = new WeakMap<object, CachedMetadata>();
-
-  /** Cached API key headers - computed once on first use */
-  private cachedApiKeyHeaders: string[] | null = null;
 
   constructor(
     private readonly reflector: Reflector,
@@ -350,12 +340,8 @@ export class AuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = getRequestFromContext(context);
     const contextType = context.getType<string>() as ContextType;
-    const handler = context.getHandler();
-    const errorMessages: AuthErrorMessages | undefined =
-      this.options.errorMessages;
-
-    // Get cached metadata or compute and cache
-    const metadata = this.getMetadata(context, handler);
+    const errorMessages = this.options.errorMessages;
+    const metadata = this.getMetadata(context);
 
     // 1. Check @AllowAnonymous() first - Performance optimization
     if (metadata.isPublic) {
@@ -443,21 +429,10 @@ export class AuthGuard implements CanActivate {
     return true;
   }
 
-  /**
-   * Get or compute cached metadata
-   */
-  private getMetadata(
-    context: ExecutionContext,
-    handler: object,
-  ): CachedMetadata {
-    let cached = this.metadataCache.get(handler);
-    if (cached) {
-      return cached;
-    }
-
+  private getMetadata(context: ExecutionContext): Metadata {
     const targets = [context.getHandler(), context.getClass()];
 
-    cached = {
+    return {
       isPublic: this.reflector.getAllAndOverride<boolean>(
         ALLOW_ANONYMOUS_KEY,
         targets,
@@ -506,9 +481,6 @@ export class AuthGuard implements CanActivate {
         targets,
       ),
     };
-
-    this.metadataCache.set(handler, cached);
-    return cached;
   }
 
   /**
@@ -516,7 +488,7 @@ export class AuthGuard implements CanActivate {
    */
   private runSecurityChecks(
     contextType: ContextType,
-    metadata: CachedMetadata,
+    metadata: Metadata,
     session: UserSession,
     request: FastifyRequest,
     errorMessages?: AuthErrorMessages,
@@ -577,7 +549,7 @@ export class AuthGuard implements CanActivate {
    */
   private runAuthorizationChecks(
     contextType: ContextType,
-    metadata: CachedMetadata,
+    metadata: Metadata,
     session: UserSession,
     errorMessages?: AuthErrorMessages,
   ): void {
@@ -645,7 +617,7 @@ export class AuthGuard implements CanActivate {
    */
   private async runOrganizationChecks(
     contextType: ContextType,
-    metadata: CachedMetadata,
+    metadata: Metadata,
     session: UserSession,
     request: FastifyRequest,
     errorMessages?: AuthErrorMessages,
@@ -768,33 +740,8 @@ export class AuthGuard implements CanActivate {
     }
   }
 
-  /**
-   * Get API key headers to check
-   * Reads from Better Auth apiKey plugin's apiKeyHeaders config if available
-   */
   private getApiKeyHeaders(): string[] {
-    // Return cached headers if available
-    if (this.cachedApiKeyHeaders !== null) {
-      return this.cachedApiKeyHeaders;
-    }
-
-    // Try to read from Better Auth apiKey plugin config
-    const configuredHeaders = this.getApiKeyHeadersFromAuth();
-    if (configuredHeaders) {
-      this.cachedApiKeyHeaders = configuredHeaders;
-
-      if (this.options.debug) {
-        this.logger.debug(
-          `Using API key headers from Better Auth config: ${JSON.stringify(configuredHeaders)}`,
-        );
-      }
-
-      return this.cachedApiKeyHeaders;
-    }
-
-    // Default headers
-    this.cachedApiKeyHeaders = DEFAULT_API_KEY_HEADERS;
-    return this.cachedApiKeyHeaders;
+    return this.getApiKeyHeadersFromAuth() ?? DEFAULT_API_KEY_HEADERS;
   }
 
   /**

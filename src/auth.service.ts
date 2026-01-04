@@ -97,9 +97,6 @@ interface AuthWithApi {
  */
 @Injectable()
 export class AuthService<T extends { api: T['api'] } = AuthWithApi> {
-  /** Cached base path */
-  private cachedBasePath: string | null = null;
-
   constructor(
     @Inject(AUTH_MODULE_OPTIONS)
     private readonly options: AuthModuleOptions<T>,
@@ -158,17 +155,11 @@ export class AuthService<T extends { api: T['api'] } = AuthWithApi> {
     return this.options.auth;
   }
 
-  /**
-   * Get configured basePath (cached for performance)
-   */
   get basePath(): string {
-    if (this.cachedBasePath === null) {
-      const authBasePath = this.auth.options?.basePath;
-      this.cachedBasePath = normalizeBasePath(
-        this.options.basePath ?? authBasePath ?? '/api/auth',
-      );
-    }
-    return this.cachedBasePath;
+    const authBasePath = this.auth.options?.basePath;
+    return normalizeBasePath(
+      this.options.basePath ?? authBasePath ?? '/api/auth',
+    );
   }
 
   /**
