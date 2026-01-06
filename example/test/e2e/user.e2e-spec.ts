@@ -446,4 +446,98 @@ describe('UserController (e2e)', () => {
       expect(response.status).toBe(403);
     });
   });
+
+  describe('createAuthParamDecorator Examples', () => {
+    it('GET /users/request-context - should return 401 without auth', () => {
+      return request(app.getHttpServer())
+        .get('/users/request-context')
+        .expect(401);
+    });
+
+    it('GET /users/request-context - should return request context with valid session', async () => {
+      const response = await authenticatedRequest(app, userCookies)
+        .get('/users/request-context')
+        .expect(200);
+
+      expect(response.body).toHaveProperty('message');
+      expect(response.body).toHaveProperty('context');
+      expect(response.body.context).toHaveProperty('userId');
+      expect(response.body.context).toHaveProperty('userEmail');
+      expect(response.body.context).toHaveProperty('isAdmin');
+      expect(response.body.context).toHaveProperty('isImpersonating');
+      expect(response.body.context.userEmail).toBe(userEmail);
+      expect(response.body.context.isAdmin).toBe(false);
+      expect(response.body.context.isImpersonating).toBe(false);
+    });
+
+    it('GET /users/request-context - should return isAdmin=true for admin user', async () => {
+      const { cookies } = await createUserWithRole(app, {
+        email: generateTestEmail('admin-ctx'),
+        password: 'Test123!',
+        name: 'Admin Context User',
+        role: 'admin',
+      });
+
+      const response = await authenticatedRequest(app, cookies)
+        .get('/users/request-context')
+        .expect(200);
+
+      expect(response.body.context.isAdmin).toBe(true);
+    });
+
+    it('GET /users/audit-context - should return audit context', async () => {
+      const response = await authenticatedRequest(app, userCookies)
+        .get('/users/audit-context')
+        .expect(200);
+
+      expect(response.body).toHaveProperty('context');
+      expect(response.body.context).toHaveProperty('actorId');
+      expect(response.body.context).toHaveProperty('actorEmail');
+      expect(response.body.context).toHaveProperty('actorType');
+      expect(response.body.context).toHaveProperty('impersonatorId');
+      expect(response.body.context).toHaveProperty('organizationId');
+      expect(response.body.context).toHaveProperty('timestamp');
+      expect(response.body.context.actorType).toBe('user');
+      expect(response.body.context.actorEmail).toBe(userEmail);
+      expect(response.body.context.impersonatorId).toBeNull();
+    });
+
+    it('GET /users/combined-context - should return multiple contexts', async () => {
+      const response = await authenticatedRequest(app, userCookies)
+        .get('/users/combined-context')
+        .expect(200);
+
+      expect(response.body).toHaveProperty('request');
+      expect(response.body).toHaveProperty('audit');
+      expect(response.body.request).toHaveProperty('userId');
+      expect(response.body.audit).toHaveProperty('actorId');
+      expect(response.body.request.userEmail).toBe(userEmail);
+      expect(response.body.audit.actorEmail).toBe(userEmail);
+    });
+
+    it('GET /users/tenant-context - should return 403 without organization', async () => {
+      await authenticatedRequest(app, userCookies)
+        .get('/users/tenant-context')
+        .expect(403);
+    });
+
+    it('GET /users/context-with-org - should work without auth (optional)', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/users/context-with-org')
+        .expect(200);
+
+      expect(response.body).toHaveProperty('context');
+      expect(response.body.context.userId).toBe('anonymous');
+      expect(response.body.organization).toBeNull();
+    });
+
+    it('GET /users/context-with-org - should include user info when authenticated', async () => {
+      const response = await authenticatedRequest(app, userCookies)
+        .get('/users/context-with-org')
+        .expect(200);
+
+      expect(response.body.context.userId).toBe(userId);
+      expect(response.body.context.userEmail).toBe(userEmail);
+    });
+  });
 });

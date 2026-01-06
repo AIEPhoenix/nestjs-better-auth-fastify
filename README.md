@@ -27,6 +27,7 @@
   - [Alternative Auth Methods](#alternative-auth-methods)
   - [Organization Plugin](#organization-plugin-decorators)
   - [Parameter Decorators](#parameter-decorators)
+  - [Custom Auth Context Decorators](#custom-auth-context-decorators)
 - [Hook System](#-hook-system)
 - [AuthService API](#-authservice-api)
 - [Type Inference](#-type-inference)
@@ -156,13 +157,13 @@ export class UserController {
 
 ### Access Control Decorators
 
-| Decorator | Description | Example |
-|-----------|-------------|---------|
-| `@AllowAnonymous()` | Skip authentication check | Public endpoints |
-| `@OptionalAuth()` | Auth optional, session injected if present | Mixed-access endpoints |
-| `@Roles(['admin'])` | Require specific roles | Admin-only routes |
-| `@Permissions(['read'])` | Require specific permissions | Permission-based access |
-| `@RequireFreshSession()` | Require recently authenticated session | Sensitive operations |
+| Decorator                | Description                                | Example                 |
+| ------------------------ | ------------------------------------------ | ----------------------- |
+| `@AllowAnonymous()`      | Skip authentication check                  | Public endpoints        |
+| `@OptionalAuth()`        | Auth optional, session injected if present | Mixed-access endpoints  |
+| `@Roles(['admin'])`      | Require specific roles                     | Admin-only routes       |
+| `@Permissions(['read'])` | Require specific permissions               | Permission-based access |
+| `@RequireFreshSession()` | Require recently authenticated session     | Sensitive operations    |
 
 #### Roles & Permissions Examples
 
@@ -212,12 +213,12 @@ export const auth = betterAuth({
 });
 ```
 
-| Decorator | Description |
-|-----------|-------------|
-| `@AdminOnly()` | Admin role required |
-| `@BanCheck()` | Real-time ban check (Better Auth only checks at session creation) |
-| `@DisallowImpersonation()` | Block impersonated sessions |
-| `@SecureAdminOnly()` | Combined: Admin + Fresh + No Impersonation |
+| Decorator                  | Description                                                       |
+| -------------------------- | ----------------------------------------------------------------- |
+| `@AdminOnly()`             | Admin role required                                               |
+| `@BanCheck()`              | Real-time ban check (Better Auth only checks at session creation) |
+| `@DisallowImpersonation()` | Block impersonated sessions                                       |
+| `@SecureAdminOnly()`       | Combined: Admin + Fresh + No Impersonation                        |
 
 ```typescript
 // High-security admin operation
@@ -334,10 +335,10 @@ export const auth = betterAuth({
 });
 ```
 
-| Decorator | Description |
-|-----------|-------------|
-| `@OrgRequired()` | Require organization context |
-| `@OrgRoles(['owner'])` | Require organization roles |
+| Decorator               | Description                      |
+| ----------------------- | -------------------------------- |
+| `@OrgRequired()`        | Require organization context     |
+| `@OrgRoles(['owner'])`  | Require organization roles       |
 | `@OrgPermission({...})` | Require organization permissions |
 
 ```typescript
@@ -386,16 +387,16 @@ curl -H "x-organization-id: <org-id>" /org/dashboard
 
 ### Parameter Decorators
 
-| Decorator | Description | Type |
-|-----------|-------------|------|
-| `@Session()` | Full session object | `UserSession` |
-| `@CurrentUser()` | Current user | `UserSession['user']` |
-| `@UserProperty('id')` | Specific user property | `string` |
-| `@ApiKey()` | API Key info | `ApiKeyValidation['key']` |
-| `@CurrentOrg()` | Current organization | `Organization` |
-| `@OrgMember()` | Organization membership | `OrganizationMember` |
-| `@IsImpersonating()` | Impersonation status | `boolean` |
-| `@ImpersonatedBy()` | Impersonator admin ID | `string \| null` |
+| Decorator             | Description             | Type                      |
+| --------------------- | ----------------------- | ------------------------- |
+| `@Session()`          | Full session object     | `UserSession`             |
+| `@CurrentUser()`      | Current user            | `UserSession['user']`     |
+| `@UserProperty('id')` | Specific user property  | `string`                  |
+| `@ApiKey()`           | API Key info            | `ApiKeyValidation['key']` |
+| `@CurrentOrg()`       | Current organization    | `Organization`            |
+| `@OrgMember()`        | Organization membership | `OrganizationMember`      |
+| `@IsImpersonating()`  | Impersonation status    | `boolean`                 |
+| `@ImpersonatedBy()`   | Impersonator admin ID   | `string \| null`          |
 
 ```typescript
 @Get('me')
@@ -416,6 +417,169 @@ getOrgContext(
   @OrgMember() member: OrganizationMember,
 ) {
   return { org, member };
+}
+```
+
+### Custom Auth Context Decorators
+
+Create reusable parameter decorators with `createAuthParamDecorator` to reduce boilerplate and standardize auth context extraction across your application.
+
+**Before** - repetitive parameter injection:
+
+```typescript
+@Get(':id')
+findOne(
+  @Session() session: UserSession,
+  @CurrentOrg() org: Organization | null,
+  @OrgMember() member: OrganizationMember | null,
+  @Param('id') id: string,
+) {
+  const ctx = this.buildContext(session, org, member); // manual mapping every time
+  return this.resourceService.findOne(id, ctx);
+}
+```
+
+**After** - clean and reusable:
+
+```typescript
+@Get(':id')
+findOne(@RequestCtx() ctx: RequestContext, @Param('id') id: string) {
+  return this.resourceService.findOne(id, ctx);
+}
+```
+
+#### Basic Usage
+
+```typescript
+import {
+  createAuthParamDecorator,
+  AuthContext,
+} from '@sapix/nestjs-better-auth-fastify';
+
+// Define your context interface
+interface RequestContext {
+  userId: string;
+  userEmail: string;
+  isAdmin: boolean;
+  organizationId: string | null;
+}
+
+// Create a reusable decorator
+const RequestCtx = createAuthParamDecorator<RequestContext>(
+  (auth: AuthContext) => ({
+    userId: auth.user?.id ?? 'anonymous',
+    userEmail: auth.user?.email ?? '',
+    isAdmin: (auth.user as any)?.role === 'admin',
+    organizationId: auth.organization?.id ?? null,
+  }),
+);
+
+// Use in controllers - clean and consistent
+@Controller('resources')
+export class ResourceController {
+  @Get(':id')
+  findOne(@RequestCtx() ctx: RequestContext, @Param('id') id: string) {
+    return this.resourceService.findOne(id, ctx);
+  }
+
+  @Post()
+  create(@RequestCtx() ctx: RequestContext, @Body() dto: CreateDto) {
+    return this.resourceService.create(dto, ctx);
+  }
+}
+```
+
+#### AuthContext Properties
+
+The `AuthContext` object provides access to all auth-related data:
+
+```typescript
+interface AuthContext {
+  session: UserSession | null;
+  user: UserSession['user'] | null;
+  organization: Organization | null;
+  orgMember: OrganizationMember | null;
+  isImpersonating: boolean;
+  impersonatedBy: string | null;
+  apiKey: ApiKeyValidation['key'] | null;
+}
+```
+
+#### Real-World Examples
+
+**Multi-Tenant Context:**
+
+```typescript
+interface TenantContext {
+  userId: string;
+  tenantId: string | null;
+  tenantRole: string;
+  isTenantAdmin: boolean;
+}
+
+const TenantCtx = createAuthParamDecorator<TenantContext>((auth) => ({
+  userId: auth.user?.id ?? 'anonymous',
+  tenantId: auth.organization?.id ?? null,
+  tenantRole: auth.orgMember?.role ?? 'none',
+  isTenantAdmin:
+    auth.orgMember?.role === 'owner' || auth.orgMember?.role === 'admin',
+}));
+```
+
+**Audit Context:**
+
+```typescript
+interface AuditContext {
+  actorId: string;
+  actorType: 'user' | 'apiKey' | 'system';
+  impersonatorId: string | null;
+  timestamp: string;
+}
+
+const AuditCtx = createAuthParamDecorator<AuditContext>((auth) => ({
+  actorId: auth.apiKey?.userId ?? auth.user?.id ?? 'system',
+  actorType: auth.apiKey ? 'apiKey' : auth.user ? 'user' : 'system',
+  impersonatorId: auth.impersonatedBy,
+  timestamp: new Date().toISOString(),
+}));
+```
+
+**Service Layer Context:**
+
+```typescript
+interface ServiceContext {
+  requesterId: string;
+  scope: {
+    orgId: string | null;
+    permissions: string[];
+  };
+}
+
+const ServiceCtx = createAuthParamDecorator<ServiceContext>((auth) => {
+  const permissions = ['read'];
+  if ((auth.user as any)?.role === 'admin') {
+    permissions.push('write', 'delete');
+  }
+  return {
+    requesterId: auth.user?.id ?? 'anonymous',
+    scope: {
+      orgId: auth.organization?.id ?? null,
+      permissions,
+    },
+  };
+});
+```
+
+#### Combining Multiple Decorators
+
+```typescript
+@Get('dashboard')
+getDashboard(
+  @RequestCtx() request: RequestContext,
+  @AuditCtx() audit: AuditContext,
+) {
+  this.logger.log('Dashboard accessed', audit);
+  return this.dashboardService.getData(request);
 }
 ```
 
@@ -483,14 +647,14 @@ export class AppModule {}
 
 ### Common Hook Paths
 
-| Path | Description |
-|------|-------------|
-| `/sign-up/email` | Email sign-up |
-| `/sign-in/email` | Email sign-in |
-| `/sign-out` | Sign out |
-| `/forget-password` | Forgot password |
-| `/reset-password` | Reset password |
-| `/verify-email` | Email verification |
+| Path               | Description        |
+| ------------------ | ------------------ |
+| `/sign-up/email`   | Email sign-up      |
+| `/sign-in/email`   | Email sign-in      |
+| `/sign-out`        | Sign out           |
+| `/forget-password` | Forgot password    |
+| `/reset-password`  | Reset password     |
+| `/verify-email`    | Email verification |
 
 ## 🛠 AuthService API
 
@@ -520,7 +684,13 @@ export class MyService {
     }
 
     // Check permissions
-    if (this.authService.hasPermission(session, ['user:read', 'user:write'], 'all')) {
+    if (
+      this.authService.hasPermission(
+        session,
+        ['user:read', 'user:write'],
+        'all',
+      )
+    ) {
       // User has all required permissions
     }
 
@@ -815,6 +985,7 @@ import {
   getWebHeadersFromRequest,
   writeWebResponseToReply,
   normalizeBasePath,
+  getRequestFromContext,
 } from '@sapix/nestjs-better-auth-fastify';
 
 // Convert Fastify headers to Web standard Headers
@@ -831,6 +1002,9 @@ await writeWebResponseToReply(response, reply);
 
 // Normalize basePath (ensures starts with /, no trailing /)
 const path = normalizeBasePath('api/auth/'); // '/api/auth'
+
+// Get FastifyRequest from NestJS ExecutionContext (supports HTTP, GraphQL, WebSocket)
+const request = getRequestFromContext(context);
 ```
 
 ## 📝 Request Extension
@@ -871,7 +1045,11 @@ getProfile(@Req() request: FastifyRequest) {
 
 ```typescript
 import { Test } from '@nestjs/testing';
-import { AuthModule, AuthService, AUTH_MODULE_OPTIONS } from '@sapix/nestjs-better-auth-fastify';
+import {
+  AuthModule,
+  AuthService,
+  AUTH_MODULE_OPTIONS,
+} from '@sapix/nestjs-better-auth-fastify';
 
 const module = await Test.createTestingModule({
   imports: [AuthModule.forRoot({ auth, disableGlobalGuard: true })],
@@ -894,10 +1072,7 @@ const mockAuthService = {
 };
 
 const module = await Test.createTestingModule({
-  providers: [
-    MyService,
-    { provide: AuthService, useValue: mockAuthService },
-  ],
+  providers: [MyService, { provide: AuthService, useValue: mockAuthService }],
 }).compile();
 ```
 

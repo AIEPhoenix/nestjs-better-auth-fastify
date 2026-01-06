@@ -485,6 +485,20 @@ declare module 'fastify' {
 }
 
 // ============================================
+// Auth Context (for createAuthParamDecorator)
+// ============================================
+
+export interface AuthContext {
+  session: UserSession | null;
+  user: UserSession['user'] | null;
+  organization: Organization | null;
+  orgMember: OrganizationMember | null;
+  isImpersonating: boolean;
+  impersonatedBy: string | null;
+  apiKey: ApiKeyValidation['key'] | null;
+}
+
+// ============================================
 // Auth Method Types
 // ============================================
 

@@ -27,8 +27,6 @@ export {
   Roles,
   Permissions,
   RequireFreshSession,
-  Public,
-  Optional,
 } from './access-control.decorators';
 
 export {
@@ -55,6 +53,9 @@ export {
   OrgMember,
   IsImpersonating,
   ImpersonatedBy,
+  createAuthParamDecorator,
+  type AuthContext,
+  type AuthContextMapper,
 } from './param.decorators';
 
 export { Hook, BeforeHook, AfterHook } from './hook.decorators';

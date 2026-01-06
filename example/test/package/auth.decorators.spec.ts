@@ -18,9 +18,9 @@ import {
   Hook,
   BeforeHook,
   AfterHook,
-  Public,
-  Optional,
   getRequestFromContext,
+  createAuthParamDecorator,
+  type AuthContext,
   ALLOW_ANONYMOUS_KEY,
   OPTIONAL_AUTH_KEY,
   ROLES_KEY,
@@ -392,16 +392,6 @@ describe('auth.decorators', () => {
     });
   });
 
-  describe('Deprecated Aliases', () => {
-    it('Public should be an alias for AllowAnonymous', () => {
-      expect(Public).toBe(AllowAnonymous);
-    });
-
-    it('Optional should be an alias for OptionalAuth', () => {
-      expect(Optional).toBe(OptionalAuth);
-    });
-  });
-
   describe('getRequestFromContext', () => {
     it('should return HTTP request for http context', () => {
       const mockRequest = { url: '/test' };
@@ -576,6 +566,361 @@ describe('auth.decorators', () => {
         const result = request.impersonatedBy ?? null;
 
         expect(result).toBeNull();
+      });
+    });
+  });
+
+  describe('createAuthParamDecorator', () => {
+    const createMockContext = (request: any): ExecutionContext =>
+      ({
+        getType: jest.fn().mockReturnValue('http'),
+        switchToHttp: jest.fn().mockReturnValue({
+          getRequest: jest.fn().mockReturnValue(request),
+        }),
+      }) as unknown as ExecutionContext;
+
+    const mockUser = {
+      id: 'user-123',
+      email: 'test@example.com',
+      name: 'Test User',
+      role: 'admin',
+      emailVerified: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const mockSession = {
+      id: 'session-123',
+      userId: 'user-123',
+      token: 'token-abc',
+      expiresAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const mockOrganization = {
+      id: 'org-123',
+      name: 'Test Org',
+      slug: 'test-org',
+      createdAt: new Date(),
+    };
+
+    const mockOrgMember = {
+      id: 'member-123',
+      userId: 'user-123',
+      organizationId: 'org-123',
+      role: 'owner',
+      createdAt: new Date(),
+    };
+
+    const mockApiKey = {
+      id: 'apikey-123',
+      name: 'Test API Key',
+      userId: 'user-123',
+      permissions: { files: ['read', 'write'] },
+      createdAt: new Date(),
+    };
+
+    describe('factory function', () => {
+      it('should be a function', () => {
+        expect(typeof createAuthParamDecorator).toBe('function');
+      });
+
+      it('should return a decorator factory', () => {
+        const CustomContext = createAuthParamDecorator((auth) => ({
+          userId: auth.user?.id ?? null,
+        }));
+        expect(typeof CustomContext).toBe('function');
+      });
+    });
+
+    describe('AuthContext extraction', () => {
+      it('should extract all auth properties from request', () => {
+        const mockRequest = {
+          session: { session: mockSession, user: mockUser },
+          user: mockUser,
+          organization: mockOrganization,
+          organizationMember: mockOrgMember,
+          isImpersonating: true,
+          impersonatedBy: 'admin-456',
+          apiKey: mockApiKey,
+        };
+
+        const ctx = createMockContext(mockRequest);
+        const request = getRequestFromContext(ctx);
+
+        expect(request.session).toEqual({
+          session: mockSession,
+          user: mockUser,
+        });
+        expect(request.user).toEqual(mockUser);
+        expect(request.organization).toEqual(mockOrganization);
+        expect(request.organizationMember).toEqual(mockOrgMember);
+        expect(request.isImpersonating).toBe(true);
+        expect(request.impersonatedBy).toBe('admin-456');
+        expect(request.apiKey).toEqual(mockApiKey);
+      });
+
+      it('should handle null session', () => {
+        const mockRequest = {
+          session: null,
+          user: null,
+        };
+
+        const ctx = createMockContext(mockRequest);
+        const request = getRequestFromContext(ctx);
+
+        expect(request.session).toBeNull();
+        expect(request.user).toBeNull();
+      });
+
+      it('should handle missing optional properties', () => {
+        const mockRequest = {
+          session: { session: mockSession, user: mockUser },
+          user: mockUser,
+        };
+
+        const ctx = createMockContext(mockRequest);
+        const request = getRequestFromContext(ctx);
+
+        expect(request.organization).toBeUndefined();
+        expect(request.organizationMember).toBeUndefined();
+        expect(request.apiKey).toBeUndefined();
+        expect(request.isImpersonating).toBeUndefined();
+        expect(request.impersonatedBy).toBeUndefined();
+      });
+    });
+
+    describe('mapper function', () => {
+      it('should map auth context to custom shape', () => {
+        interface ConnectionContext {
+          userId: string;
+          isAdmin: boolean;
+          organizationId: string | null;
+          orgRole: string | null;
+        }
+
+        const ConnectionCtx = createAuthParamDecorator<ConnectionContext>(
+          (auth: AuthContext) => ({
+            userId: auth.user!.id,
+            isAdmin: (auth.user as any)?.role === 'admin',
+            organizationId: auth.organization?.id ?? null,
+            orgRole: auth.orgMember?.role ?? null,
+          }),
+        );
+
+        expect(ConnectionCtx).toBeDefined();
+        expect(typeof ConnectionCtx).toBe('function');
+      });
+
+      it('should support returning primitive values', () => {
+        const UserIdOnly = createAuthParamDecorator<string | null>(
+          (auth) => auth.user?.id ?? null,
+        );
+        expect(UserIdOnly).toBeDefined();
+      });
+
+      it('should support returning boolean values', () => {
+        const IsAuthenticated = createAuthParamDecorator<boolean>(
+          (auth) => auth.session !== null,
+        );
+        expect(IsAuthenticated).toBeDefined();
+      });
+
+      it('should support returning arrays', () => {
+        const UserRoles = createAuthParamDecorator<string[]>((auth) => {
+          const roles: string[] = [];
+          if (auth.user) {
+            const userRole = (auth.user as any).role;
+            if (userRole) roles.push(userRole);
+          }
+          if (auth.orgMember?.role) {
+            roles.push(`org:${auth.orgMember.role}`);
+          }
+          return roles;
+        });
+        expect(UserRoles).toBeDefined();
+      });
+    });
+
+    describe('null safety', () => {
+      it('should provide default values for missing properties', () => {
+        const SafeContext = createAuthParamDecorator((auth) => ({
+          hasSession: auth.session !== null,
+          hasUser: auth.user !== null,
+          hasOrg: auth.organization !== null,
+          hasOrgMember: auth.orgMember !== null,
+          isImpersonating: auth.isImpersonating,
+          hasApiKey: auth.apiKey !== null,
+        }));
+
+        expect(SafeContext).toBeDefined();
+      });
+
+      it('should handle partial org context', () => {
+        const OrgContext = createAuthParamDecorator((auth) => ({
+          orgId: auth.organization?.id ?? 'no-org',
+          orgName: auth.organization?.name ?? 'Unknown',
+          memberRole: auth.orgMember?.role ?? 'guest',
+        }));
+
+        expect(OrgContext).toBeDefined();
+      });
+    });
+
+    describe('complex mapping logic', () => {
+      it('should support conditional logic based on user role', () => {
+        const PermissionContext = createAuthParamDecorator((auth) => {
+          const permissions: string[] = ['read'];
+          const userRole = (auth.user as any)?.role;
+
+          if (userRole === 'admin') {
+            permissions.push('write', 'delete', 'admin');
+          } else if (userRole === 'moderator') {
+            permissions.push('write');
+          }
+
+          return {
+            userId: auth.user?.id ?? null,
+            permissions,
+            isAdmin: userRole === 'admin',
+          };
+        });
+
+        expect(PermissionContext).toBeDefined();
+      });
+
+      it('should support combining multiple auth sources', () => {
+        const CombinedContext = createAuthParamDecorator((auth) => ({
+          userId: auth.user?.id ?? null,
+          orgId: auth.organization?.id ?? null,
+          apiKeyId: auth.apiKey?.id ?? null,
+          authMethod: auth.apiKey
+            ? 'apiKey'
+            : auth.session
+              ? 'session'
+              : 'anonymous',
+          impersonation: {
+            active: auth.isImpersonating,
+            by: auth.impersonatedBy,
+          },
+        }));
+
+        expect(CombinedContext).toBeDefined();
+      });
+
+      it('should support deriving permissions from API key', () => {
+        const ApiKeyContext = createAuthParamDecorator((auth) => {
+          const apiKeyPerms = auth.apiKey?.permissions ?? {};
+          return {
+            keyId: auth.apiKey?.id ?? null,
+            canReadFiles: apiKeyPerms['files']?.includes('read') ?? false,
+            canWriteFiles: apiKeyPerms['files']?.includes('write') ?? false,
+            allPermissions: apiKeyPerms,
+          };
+        });
+
+        expect(ApiKeyContext).toBeDefined();
+      });
+    });
+
+    describe('type inference', () => {
+      it('should infer return type from mapper', () => {
+        const TypedContext = createAuthParamDecorator((auth) => ({
+          id: auth.user?.id ?? '',
+          count: 42,
+          active: true,
+          tags: ['a', 'b'],
+        }));
+
+        expect(TypedContext).toBeDefined();
+      });
+
+      it('should support explicit generic type parameter', () => {
+        interface StrictContext {
+          userId: string;
+          timestamp: number;
+        }
+
+        const StrictTypedContext = createAuthParamDecorator<StrictContext>(
+          (auth) => ({
+            userId: auth.user?.id ?? 'anonymous',
+            timestamp: Date.now(),
+          }),
+        );
+
+        expect(StrictTypedContext).toBeDefined();
+      });
+    });
+
+    describe('real-world use cases', () => {
+      it('should support multi-tenant context', () => {
+        interface TenantContext {
+          userId: string;
+          tenantId: string | null;
+          tenantRole: string;
+          isTenantAdmin: boolean;
+        }
+
+        const TenantCtx = createAuthParamDecorator<TenantContext>((auth) => ({
+          userId: auth.user?.id ?? 'anonymous',
+          tenantId: auth.organization?.id ?? null,
+          tenantRole: auth.orgMember?.role ?? 'none',
+          isTenantAdmin:
+            auth.orgMember?.role === 'owner' ||
+            auth.orgMember?.role === 'admin',
+        }));
+
+        expect(TenantCtx).toBeDefined();
+      });
+
+      it('should support audit context', () => {
+        interface AuditContext {
+          actorId: string;
+          actorType: 'user' | 'apiKey' | 'system';
+          impersonatorId: string | null;
+          organizationId: string | null;
+        }
+
+        const AuditCtx = createAuthParamDecorator<AuditContext>((auth) => ({
+          actorId: auth.apiKey?.userId ?? auth.user?.id ?? 'system',
+          actorType: auth.apiKey ? 'apiKey' : auth.user ? 'user' : 'system',
+          impersonatorId: auth.impersonatedBy,
+          organizationId: auth.organization?.id ?? null,
+        }));
+
+        expect(AuditCtx).toBeDefined();
+      });
+
+      it('should support service layer context', () => {
+        interface ServiceContext {
+          requesterId: string;
+          requesterEmail: string | null;
+          scope: {
+            orgId: string | null;
+            role: string;
+            permissions: string[];
+          };
+        }
+
+        const ServiceCtx = createAuthParamDecorator<ServiceContext>((auth) => {
+          const basePermissions = ['read'];
+          if ((auth.user as any)?.role === 'admin') {
+            basePermissions.push('write', 'delete');
+          }
+
+          return {
+            requesterId: auth.user?.id ?? 'anonymous',
+            requesterEmail: auth.user?.email ?? null,
+            scope: {
+              orgId: auth.organization?.id ?? null,
+              role: auth.orgMember?.role ?? 'none',
+              permissions: basePermissions,
+            },
+          };
+        });
+
+        expect(ServiceCtx).toBeDefined();
       });
     });
   });

@@ -19,8 +19,72 @@ import {
   UserProperty,
   IsImpersonating,
   ImpersonatedBy,
+  createAuthParamDecorator,
+  OrgRequired,
+  CurrentOrg,
+  OrgMember,
 } from '@sapix/nestjs-better-auth-fastify';
-import type { UserSession } from '@sapix/nestjs-better-auth-fastify';
+import type {
+  UserSession,
+  AuthContext,
+  Organization,
+  OrganizationMember,
+} from '@sapix/nestjs-better-auth-fastify';
+
+interface RequestContext {
+  userId: string;
+  userEmail: string;
+  isAdmin: boolean;
+  isImpersonating: boolean;
+}
+
+const RequestCtx = createAuthParamDecorator<RequestContext>(
+  (auth: AuthContext) => ({
+    userId: auth.user?.id ?? 'anonymous',
+    userEmail: auth.user?.email ?? '',
+    isAdmin: (auth.user as any)?.role === 'admin',
+    isImpersonating: auth.isImpersonating,
+  }),
+);
+
+interface TenantContext {
+  userId: string;
+  tenantId: string | null;
+  tenantName: string | null;
+  tenantRole: string;
+  isTenantAdmin: boolean;
+}
+
+const TenantCtx = createAuthParamDecorator<TenantContext>(
+  (auth: AuthContext) => ({
+    userId: auth.user?.id ?? 'anonymous',
+    tenantId: auth.organization?.id ?? null,
+    tenantName: auth.organization?.name ?? null,
+    tenantRole: auth.orgMember?.role ?? 'none',
+    isTenantAdmin:
+      auth.orgMember?.role === 'owner' || auth.orgMember?.role === 'admin',
+  }),
+);
+
+interface AuditContext {
+  actorId: string;
+  actorEmail: string | null;
+  actorType: 'user' | 'apiKey' | 'anonymous';
+  impersonatorId: string | null;
+  organizationId: string | null;
+  timestamp: string;
+}
+
+const AuditCtx = createAuthParamDecorator<AuditContext>(
+  (auth: AuthContext) => ({
+    actorId: auth.apiKey?.userId ?? auth.user?.id ?? 'anonymous',
+    actorEmail: auth.user?.email ?? null,
+    actorType: auth.apiKey ? 'apiKey' : auth.user ? 'user' : 'anonymous',
+    impersonatorId: auth.impersonatedBy,
+    organizationId: auth.organization?.id ?? null,
+    timestamp: new Date().toISOString(),
+  }),
+);
 
 /**
  * User Controller
@@ -456,6 +520,95 @@ export class UserController {
       user: user.email,
       note: 'Your account will be deleted in 30 days',
       timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('request-context')
+  @ApiBearerAuth('bearer')
+  @ApiOperation({
+    summary: 'Get request context',
+    description: 'Demonstrates createAuthParamDecorator with RequestCtx',
+  })
+  @ApiResponse({ status: 200, description: 'Request context' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  getRequestContext(@RequestCtx() ctx: RequestContext) {
+    return {
+      message: 'Request context using createAuthParamDecorator',
+      context: ctx,
+    };
+  }
+
+  @Get('tenant-context')
+  @OrgRequired()
+  @ApiBearerAuth('bearer')
+  @ApiOperation({
+    summary: 'Get tenant context',
+    description:
+      'Demonstrates createAuthParamDecorator with TenantCtx (requires org)',
+  })
+  @ApiResponse({ status: 200, description: 'Tenant context' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Organization required' })
+  getTenantContext(@TenantCtx() ctx: TenantContext) {
+    return {
+      message: 'Tenant context using createAuthParamDecorator',
+      context: ctx,
+    };
+  }
+
+  @Get('audit-context')
+  @ApiBearerAuth('bearer')
+  @ApiOperation({
+    summary: 'Get audit context',
+    description:
+      'Demonstrates createAuthParamDecorator with AuditCtx for logging',
+  })
+  @ApiResponse({ status: 200, description: 'Audit context' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  getAuditContext(@AuditCtx() ctx: AuditContext) {
+    return {
+      message: 'Audit context using createAuthParamDecorator',
+      context: ctx,
+    };
+  }
+
+  @Get('combined-context')
+  @ApiBearerAuth('bearer')
+  @ApiOperation({
+    summary: 'Get combined context',
+    description:
+      'Demonstrates using multiple custom context decorators together',
+  })
+  @ApiResponse({ status: 200, description: 'Combined contexts' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  getCombinedContext(
+    @RequestCtx() requestCtx: RequestContext,
+    @AuditCtx() auditCtx: AuditContext,
+  ) {
+    return {
+      message: 'Combined contexts using multiple createAuthParamDecorator',
+      request: requestCtx,
+      audit: auditCtx,
+    };
+  }
+
+  @Get('context-with-org')
+  @OptionalAuth()
+  @ApiOperation({
+    summary: 'Get context with optional org',
+    description: 'Shows context data with optional organization',
+  })
+  @ApiResponse({ status: 200, description: 'Context with org info' })
+  getContextWithOrg(
+    @RequestCtx() ctx: RequestContext,
+    @CurrentOrg() org: Organization | null,
+    @OrgMember() member: OrganizationMember | null,
+  ) {
+    return {
+      message: 'Context with optional organization',
+      context: ctx,
+      organization: org ? { id: org.id, name: org.name } : null,
+      membership: member ? { role: member.role } : null,
     };
   }
 }

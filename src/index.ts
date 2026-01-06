@@ -49,6 +49,10 @@ export {
   OrgMember,
   IsImpersonating,
   ImpersonatedBy,
+  // Auth param decorator factory
+  createAuthParamDecorator,
+  type AuthContext,
+  type AuthContextMapper,
   // Hook decorators
   Hook,
   BeforeHook,
@@ -76,9 +80,6 @@ export {
   type ApiKeyAuthMetadata,
   type OrgRolesMetadata,
   type OrgPermissionsMetadata,
-  // Deprecated aliases
-  Public,
-  Optional,
 } from './auth.decorators';
 
 // ============================================

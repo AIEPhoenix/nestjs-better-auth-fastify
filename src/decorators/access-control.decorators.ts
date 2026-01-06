@@ -49,9 +49,3 @@ export function RequireFreshSession(
   const metadata: FreshSessionMetadata = { options };
   return SetMetadata(FRESH_SESSION_KEY, metadata);
 }
-
-/** @deprecated Use AllowAnonymous instead */
-export const Public = AllowAnonymous;
-
-/** @deprecated Use OptionalAuth instead */
-export const Optional = OptionalAuth;
