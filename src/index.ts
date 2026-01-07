@@ -17,49 +17,81 @@ export { AuthService, type InferSession, type InferUser } from './auth.service';
 export { AuthGuard } from './auth.guard';
 
 // ============================================
-// Decorators - Route
+// Decorators - Access Control
 // ============================================
 export {
-  // Basic auth decorators
   AllowAnonymous,
   OptionalAuth,
   Roles,
   Permissions,
-  // Session freshness
   RequireFreshSession,
-  // Admin plugin decorators
+} from './auth.decorators';
+
+// ============================================
+// Decorators - Admin Plugin
+// ============================================
+export {
   AdminOnly,
   BanCheck,
   DisallowImpersonation,
-  // Alternative auth methods
-  BearerAuth,
-  ApiKeyAuth,
-  // Organization plugin decorators
+  SecureAdminOnly,
+} from './auth.decorators';
+
+// ============================================
+// Decorators - API Key
+// ============================================
+export { ApiKeyAuth, ApiKey } from './auth.decorators';
+
+// ============================================
+// Decorators - Organization Plugin
+// ============================================
+export {
   OrgRequired,
+  OptionalOrg,
   OrgRoles,
   OrgPermission,
-  // Composite decorators
-  SecureAdminOnly,
-  // Parameter decorators
-  Session,
-  CurrentUser,
-  UserProperty,
-  ApiKey,
   CurrentOrg,
   OrgMember,
-  IsImpersonating,
-  ImpersonatedBy,
-  // Auth param decorator factory
+} from './auth.decorators';
+
+// ============================================
+// Decorators - Session
+// ============================================
+export { Session, SessionProperty } from './auth.decorators';
+
+// ============================================
+// Decorators - User
+// ============================================
+export { CurrentUser, UserProperty } from './auth.decorators';
+
+// ============================================
+// Decorators - Admin / Impersonation
+// ============================================
+export { IsImpersonating, ImpersonatedBy } from './auth.decorators';
+
+// ============================================
+// Decorators - Factory
+// ============================================
+export {
   createAuthParamDecorator,
   type AuthContext,
   type AuthContextMapper,
-  // Hook decorators
-  Hook,
-  BeforeHook,
-  AfterHook,
-  // Utility
-  getRequestFromContext,
-  // Metadata keys (for advanced use)
+} from './auth.decorators';
+
+// ============================================
+// Decorators - Hooks
+// ============================================
+export { Hook, BeforeHook, AfterHook } from './auth.decorators';
+
+// ============================================
+// Decorators - Utilities
+// ============================================
+export { getRequestFromContext } from './auth.decorators';
+
+// ============================================
+// Decorators - Metadata Keys
+// ============================================
+export {
   ALLOW_ANONYMOUS_KEY,
   OPTIONAL_AUTH_KEY,
   ROLES_KEY,
@@ -67,19 +99,24 @@ export {
   FRESH_SESSION_KEY,
   ADMIN_ONLY_KEY,
   BAN_CHECK_KEY,
-  BEARER_AUTH_KEY,
   API_KEY_AUTH_KEY,
   DISALLOW_IMPERSONATION_KEY,
   ORG_REQUIRED_KEY,
+  LOAD_ORG_KEY,
   ORG_ROLES_KEY,
   ORG_PERMISSIONS_KEY,
-  // Metadata types
-  type RolesMetadata,
-  type PermissionsMetadata,
-  type FreshSessionMetadata,
-  type ApiKeyAuthMetadata,
-  type OrgRolesMetadata,
-  type OrgPermissionsMetadata,
+} from './auth.decorators';
+
+// ============================================
+// Decorators - Metadata Types
+// ============================================
+export type {
+  RolesMetadata,
+  PermissionsMetadata,
+  FreshSessionMetadata,
+  ApiKeyAuthMetadata,
+  OrgRolesMetadata,
+  OrgPermissionsMetadata,
 } from './auth.decorators';
 
 // ============================================
@@ -109,12 +146,11 @@ export {
 // Types - Hooks
 // ============================================
 export {
-  HOOK_KEY,
-  BEFORE_HOOK_KEY,
-  AFTER_HOOK_KEY,
   type AuthHookContext,
   type EnhancedAuthHookContext,
 } from './auth.types';
+
+export { HOOK_KEY, BEFORE_HOOK_KEY, AFTER_HOOK_KEY } from './auth.decorators';
 
 // ============================================
 // Types - Decorator Options
@@ -152,4 +188,5 @@ export {
   getWebHeadersFromRequest,
   writeWebResponseToReply,
   normalizeBasePath,
+  parseStringToArray,
 } from './auth.utils';

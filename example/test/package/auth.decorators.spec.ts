@@ -9,9 +9,9 @@ import {
   AdminOnly,
   BanCheck,
   DisallowImpersonation,
-  BearerAuth,
   ApiKeyAuth,
   OrgRequired,
+  OptionalOrg,
   OrgRoles,
   OrgPermission,
   SecureAdminOnly,
@@ -28,10 +28,10 @@ import {
   FRESH_SESSION_KEY,
   ADMIN_ONLY_KEY,
   BAN_CHECK_KEY,
-  BEARER_AUTH_KEY,
   API_KEY_AUTH_KEY,
   DISALLOW_IMPERSONATION_KEY,
   ORG_REQUIRED_KEY,
+  LOAD_ORG_KEY,
   ORG_ROLES_KEY,
   ORG_PERMISSIONS_KEY,
   HOOK_KEY,
@@ -49,7 +49,6 @@ describe('auth.decorators', () => {
       expect(FRESH_SESSION_KEY).toBe('auth:freshSession');
       expect(ADMIN_ONLY_KEY).toBe('auth:adminOnly');
       expect(BAN_CHECK_KEY).toBe('auth:banCheck');
-      expect(BEARER_AUTH_KEY).toBe('auth:bearerAuth');
       expect(API_KEY_AUTH_KEY).toBe('auth:apiKeyAuth');
       expect(DISALLOW_IMPERSONATION_KEY).toBe('auth:disallowImpersonation');
       expect(ORG_REQUIRED_KEY).toBe('auth:orgRequired');
@@ -99,9 +98,6 @@ describe('auth.decorators', () => {
       @DisallowImpersonation('No impersonation allowed')
       disallowImpersonationCustomMethod() {}
 
-      @BearerAuth()
-      bearerAuthMethod() {}
-
       @ApiKeyAuth()
       apiKeyAuthMethod() {}
 
@@ -118,6 +114,9 @@ describe('auth.decorators', () => {
 
       @OrgRequired()
       orgRequiredMethod() {}
+
+      @OptionalOrg()
+      optionalOrgMethod() {}
 
       @OrgRoles(['owner', 'admin'])
       orgRolesMethod() {}
@@ -249,14 +248,6 @@ describe('auth.decorators', () => {
       expect(metadata).toEqual({ message: 'No impersonation allowed' });
     });
 
-    it('@BearerAuth should set metadata to true', () => {
-      const metadata = reflector.get(
-        BEARER_AUTH_KEY,
-        controller.bearerAuthMethod,
-      );
-      expect(metadata).toBe(true);
-    });
-
     it('@ApiKeyAuth should set metadata with default options', () => {
       const metadata = reflector.get(
         API_KEY_AUTH_KEY,
@@ -290,6 +281,14 @@ describe('auth.decorators', () => {
       const metadata = reflector.get(
         ORG_REQUIRED_KEY,
         controller.orgRequiredMethod,
+      );
+      expect(metadata).toBe(true);
+    });
+
+    it('@OptionalOrg should set metadata to true', () => {
+      const metadata = reflector.get(
+        LOAD_ORG_KEY,
+        controller.optionalOrgMethod,
       );
       expect(metadata).toBe(true);
     });
@@ -566,6 +565,47 @@ describe('auth.decorators', () => {
         const result = request.impersonatedBy ?? null;
 
         expect(result).toBeNull();
+      });
+    });
+
+    describe('SessionProperty', () => {
+      it('should return session property when session exists', () => {
+        const mockRequest = {
+          session: {
+            id: 'session-123',
+            expiresAt: new Date('2024-12-31'),
+            token: 'token-abc',
+          },
+        };
+        const mockContext = createMockContext(mockRequest);
+
+        const request = getRequestFromContext(mockContext);
+        const result = request.session?.['id' as keyof typeof request.session];
+
+        expect(result).toBe('session-123');
+      });
+
+      it('should return undefined when session is null', () => {
+        const mockRequest = { session: null };
+        const mockContext = createMockContext(mockRequest);
+
+        const request = getRequestFromContext(mockContext);
+        const result = request.session?.['id' as keyof typeof request.session];
+
+        expect(result).toBeUndefined();
+      });
+
+      it('should return undefined when property does not exist', () => {
+        const mockRequest = {
+          session: { id: 'session-123' },
+        };
+        const mockContext = createMockContext(mockRequest);
+
+        const request = getRequestFromContext(mockContext);
+        const result =
+          request.session?.['nonExistent' as keyof typeof request.session];
+
+        expect(result).toBeUndefined();
       });
     });
   });

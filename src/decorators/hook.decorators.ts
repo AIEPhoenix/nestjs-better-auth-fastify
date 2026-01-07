@@ -1,5 +1,5 @@
 import { SetMetadata, CustomDecorator } from '@nestjs/common';
-import { HOOK_KEY, BEFORE_HOOK_KEY, AFTER_HOOK_KEY } from '../auth.types';
+import { HOOK_KEY, BEFORE_HOOK_KEY, AFTER_HOOK_KEY } from './common';
 
 export const Hook = (): ClassDecorator => SetMetadata(HOOK_KEY, true);
 

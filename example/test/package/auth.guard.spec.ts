@@ -48,6 +48,15 @@ describe('AuthGuard', () => {
           freshAge: 86400,
         },
       },
+      $context: Promise.resolve({
+        internalAdapter: {
+          findUserById: jest.fn().mockResolvedValue({
+            id: 'user-1',
+            email: 'test@example.com',
+            name: 'Test User',
+          }),
+        },
+      }),
     };
 
     mockRequest = {
@@ -131,6 +140,30 @@ describe('AuthGuard', () => {
       const result = await guard.canActivate(context);
 
       expect(result).toBe(true);
+    });
+
+    it('should attach impersonation data on public routes with session', async () => {
+      jest
+        .spyOn(reflector, 'getAllAndOverride')
+        .mockImplementation((key: any) => {
+          if (key === 'auth:allowAnonymous') return true;
+          return undefined;
+        });
+      mockAuth.api.getSession.mockResolvedValue({
+        session: {
+          id: 'sess-1',
+          createdAt: new Date(),
+          impersonatedBy: 'admin-user-1',
+        },
+        user: { id: 'user-1', email: 'test@example.com' },
+      });
+
+      const context = createMockContext();
+      const result = await guard.canActivate(context);
+
+      expect(result).toBe(true);
+      expect(mockRequest.isImpersonating).toBe(true);
+      expect(mockRequest.impersonatedBy).toBe('admin-user-1');
     });
   });
 
@@ -1437,6 +1470,25 @@ describe('AuthGuard', () => {
       );
     });
 
+    it('should deny access when @OrgRoles but user has no org membership', async () => {
+      mockAuth.api.getFullOrganization = undefined;
+
+      jest
+        .spyOn(reflector, 'getAllAndOverride')
+        .mockImplementation((key: any) => {
+          if (key === 'auth:orgRoles') {
+            return { roles: ['admin'], options: { mode: 'any' } };
+          }
+          return undefined;
+        });
+
+      const context = createMockContext();
+
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
     it('should allow access when @OrgPermission matches', async () => {
       mockAuth.api.getFullOrganization.mockResolvedValue({
         organization: { id: 'org-1', name: 'Test Org' },
@@ -1483,6 +1535,25 @@ describe('AuthGuard', () => {
         .mockImplementation((key: any) => {
           if (key === 'auth:orgPermissions') {
             return { options: { resource: 'invitation', action: 'create' } };
+          }
+          return undefined;
+        });
+
+      const context = createMockContext();
+
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('should deny access when @OrgPermission but user has no org membership', async () => {
+      mockAuth.api.getFullOrganization = undefined;
+
+      jest
+        .spyOn(reflector, 'getAllAndOverride')
+        .mockImplementation((key: any) => {
+          if (key === 'auth:orgPermissions') {
+            return { options: { resource: 'member', action: 'create' } };
           }
           return undefined;
         });
@@ -2168,6 +2239,163 @@ describe('AuthGuard', () => {
       const result = await guard.canActivate(context);
 
       expect(result).toBe(true);
+    });
+  });
+
+  describe('GraphQL Context', () => {
+    it('should handle GraphQL context type', async () => {
+      mockAuth.api.getSession.mockResolvedValue({
+        session: { id: 'sess-1', createdAt: new Date() },
+        user: { id: 'user-1' },
+      });
+
+      jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(undefined);
+
+      // GqlExecutionContext.create() calls getArgs() to extract [root, args, context, info]
+      // The context (3rd arg) contains the req object
+      const gqlContext = {
+        getType: jest.fn().mockReturnValue('graphql'),
+        getHandler: jest.fn().mockReturnValue(() => {}),
+        getClass: jest.fn().mockReturnValue(class {}),
+        getArgs: jest.fn().mockReturnValue([{}, {}, { req: mockRequest }, {}]),
+        switchToHttp: jest.fn().mockReturnValue({
+          getRequest: jest.fn().mockReturnValue(mockRequest),
+        }),
+      } as unknown as ExecutionContext;
+
+      const result = await guard.canActivate(gqlContext);
+      expect(result).toBe(true);
+    });
+
+    it('should throw appropriate error for GraphQL context when unauthorized', async () => {
+      mockAuth.api.getSession.mockResolvedValue(null);
+
+      jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(undefined);
+
+      const gqlContext = {
+        getType: jest.fn().mockReturnValue('graphql'),
+        getHandler: jest.fn().mockReturnValue(() => {}),
+        getClass: jest.fn().mockReturnValue(class {}),
+        getArgs: jest.fn().mockReturnValue([{}, {}, { req: mockRequest }, {}]),
+        switchToHttp: jest.fn().mockReturnValue({
+          getRequest: jest.fn().mockReturnValue(mockRequest),
+        }),
+      } as unknown as ExecutionContext;
+
+      await expect(guard.canActivate(gqlContext)).rejects.toThrow();
+    });
+  });
+
+  describe('WebSocket Context', () => {
+    it('should handle WebSocket context type with data.request', async () => {
+      mockAuth.api.getSession.mockResolvedValue({
+        session: { id: 'sess-1', createdAt: new Date() },
+        user: { id: 'user-1' },
+      });
+
+      jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(undefined);
+
+      const wsContext = {
+        getType: jest.fn().mockReturnValue('ws'),
+        getHandler: jest.fn().mockReturnValue(() => {}),
+        getClass: jest.fn().mockReturnValue(class {}),
+        switchToHttp: jest.fn().mockReturnValue({
+          getRequest: jest.fn().mockReturnValue(mockRequest),
+        }),
+        switchToWs: jest.fn().mockReturnValue({
+          getData: jest.fn().mockReturnValue({ request: mockRequest }),
+          getClient: jest.fn().mockReturnValue({}),
+        }),
+      } as unknown as ExecutionContext;
+
+      const result = await guard.canActivate(wsContext);
+      expect(result).toBe(true);
+    });
+
+    it('should handle WebSocket context type with data.req fallback', async () => {
+      mockAuth.api.getSession.mockResolvedValue({
+        session: { id: 'sess-1', createdAt: new Date() },
+        user: { id: 'user-1' },
+      });
+
+      jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(undefined);
+
+      const wsContext = {
+        getType: jest.fn().mockReturnValue('ws'),
+        getHandler: jest.fn().mockReturnValue(() => {}),
+        getClass: jest.fn().mockReturnValue(class {}),
+        switchToHttp: jest.fn().mockReturnValue({
+          getRequest: jest.fn().mockReturnValue(mockRequest),
+        }),
+        switchToWs: jest.fn().mockReturnValue({
+          getData: jest.fn().mockReturnValue({ req: mockRequest }),
+          getClient: jest.fn().mockReturnValue({}),
+        }),
+      } as unknown as ExecutionContext;
+
+      const result = await guard.canActivate(wsContext);
+      expect(result).toBe(true);
+    });
+
+    it('should throw WsException for WebSocket context when unauthorized', async () => {
+      mockAuth.api.getSession.mockResolvedValue(null);
+
+      jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(undefined);
+
+      const wsContext = {
+        getType: jest.fn().mockReturnValue('ws'),
+        getHandler: jest.fn().mockReturnValue(() => {}),
+        getClass: jest.fn().mockReturnValue(class {}),
+        switchToHttp: jest.fn().mockReturnValue({
+          getRequest: jest.fn().mockReturnValue(mockRequest),
+        }),
+        switchToWs: jest.fn().mockReturnValue({
+          getData: jest.fn().mockReturnValue({ request: mockRequest }),
+          getClient: jest.fn().mockReturnValue({}),
+        }),
+      } as unknown as ExecutionContext;
+
+      await expect(guard.canActivate(wsContext)).rejects.toThrow();
+    });
+  });
+
+  describe('RPC Context', () => {
+    it('should handle RPC context type', async () => {
+      mockAuth.api.getSession.mockResolvedValue({
+        session: { id: 'sess-1', createdAt: new Date() },
+        user: { id: 'user-1' },
+      });
+
+      jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(undefined);
+
+      const rpcContext = {
+        getType: jest.fn().mockReturnValue('rpc'),
+        getHandler: jest.fn().mockReturnValue(() => {}),
+        getClass: jest.fn().mockReturnValue(class {}),
+        switchToHttp: jest.fn().mockReturnValue({
+          getRequest: jest.fn().mockReturnValue(mockRequest),
+        }),
+      } as unknown as ExecutionContext;
+
+      const result = await guard.canActivate(rpcContext);
+      expect(result).toBe(true);
+    });
+
+    it('should throw RpcException for RPC context when unauthorized', async () => {
+      mockAuth.api.getSession.mockResolvedValue(null);
+
+      jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(undefined);
+
+      const rpcContext = {
+        getType: jest.fn().mockReturnValue('rpc'),
+        getHandler: jest.fn().mockReturnValue(() => {}),
+        getClass: jest.fn().mockReturnValue(class {}),
+        switchToHttp: jest.fn().mockReturnValue({
+          getRequest: jest.fn().mockReturnValue(mockRequest),
+        }),
+      } as unknown as ExecutionContext;
+
+      await expect(guard.canActivate(rpcContext)).rejects.toThrow();
     });
   });
 });

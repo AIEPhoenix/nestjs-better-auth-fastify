@@ -222,6 +222,22 @@ describe('auth.utils', () => {
 
       expect(webRequest.body).toBeNull();
     });
+
+    it('should use http as default protocol when undefined', () => {
+      const request = {
+        protocol: undefined,
+        url: '/api/test',
+        method: 'GET',
+        headers: {
+          host: 'example.com',
+        },
+        body: undefined,
+      } as unknown as FastifyRequest;
+
+      const webRequest = toWebRequest(request);
+
+      expect(webRequest.url).toBe('http://example.com/api/test');
+    });
   });
 
   describe('writeWebResponseToReply', () => {
@@ -306,6 +322,61 @@ describe('auth.utils', () => {
       );
 
       expect(mockReply.send).toHaveBeenCalledWith(null);
+    });
+
+    it('should fallback to text when JSON parsing fails', async () => {
+      const response = new Response('not valid json {{{', {
+        headers: { 'content-type': 'application/json' },
+      });
+
+      await writeWebResponseToReply(
+        response,
+        mockReply as unknown as FastifyReply,
+      );
+
+      expect(mockReply.send).toHaveBeenCalledWith('not valid json {{{');
+    });
+
+    it('should handle binary response body', async () => {
+      const binaryData = new Uint8Array([0x48, 0x65, 0x6c, 0x6c, 0x6f]);
+      const response = new Response(binaryData, {
+        headers: { 'content-type': 'application/octet-stream' },
+      });
+
+      await writeWebResponseToReply(
+        response,
+        mockReply as unknown as FastifyReply,
+      );
+
+      expect(mockReply.send).toHaveBeenCalledWith(expect.any(Buffer));
+    });
+
+    it('should handle XML response as text', async () => {
+      const response = new Response('<root><item>test</item></root>', {
+        headers: { 'content-type': 'application/xml' },
+      });
+
+      await writeWebResponseToReply(
+        response,
+        mockReply as unknown as FastifyReply,
+      );
+
+      expect(mockReply.send).toHaveBeenCalledWith(
+        '<root><item>test</item></root>',
+      );
+    });
+
+    it('should handle JavaScript response as text', async () => {
+      const response = new Response('console.log("hello");', {
+        headers: { 'content-type': 'application/javascript' },
+      });
+
+      await writeWebResponseToReply(
+        response,
+        mockReply as unknown as FastifyReply,
+      );
+
+      expect(mockReply.send).toHaveBeenCalledWith('console.log("hello");');
     });
   });
 

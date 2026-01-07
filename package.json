@@ -1,6 +1,6 @@
 {
   "name": "@sapix/nestjs-better-auth-fastify",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "description": "Better Auth integration for NestJS with Fastify adapter",
   "author": "aiephoenixbl@gmail.com",
   "private": false,

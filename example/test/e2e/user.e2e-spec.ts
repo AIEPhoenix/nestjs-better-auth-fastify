@@ -95,6 +95,18 @@ describe('UserController (e2e)', () => {
     });
   });
 
+  describe('@SessionProperty() Decorator', () => {
+    it('GET /users/session-id - should return session ID', async () => {
+      const response = await authenticatedRequest(app, userCookies)
+        .get('/users/session-id')
+        .expect(200);
+
+      expect(response.body).toHaveProperty('sessionId');
+      expect(typeof response.body.sessionId).toBe('string');
+      expect(response.body.sessionId.length).toBeGreaterThan(0);
+    });
+  });
+
   describe('@UserProperty() Decorator', () => {
     it('GET /users/my-id - should return user ID', async () => {
       const response = await authenticatedRequest(app, userCookies)

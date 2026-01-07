@@ -74,7 +74,6 @@ export class AppController {
           '@SecureAdminOnly() - Admin + fresh session + no impersonation',
           '@BanCheck() - Check if user is banned',
           '@DisallowImpersonation(message?) - Prevent access during impersonation',
-          '@BearerAuth() - Require Bearer token authentication',
           '@ApiKeyAuth(options?) - Require API key authentication',
         ],
         organization: [

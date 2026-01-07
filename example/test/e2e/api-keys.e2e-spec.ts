@@ -128,15 +128,14 @@ describe('ApiKeysController (e2e)', () => {
     });
   });
 
-  describe('Bearer Token Authentication (@BearerAuth)', () => {
-    it('GET /api-keys/external/profile - should return 401 without Bearer token', () => {
+  describe('Session Auth with Bearer Token support', () => {
+    it('GET /api-keys/external/profile - should return 401 without auth', () => {
       return request(app.getHttpServer())
         .get('/api-keys/external/profile')
         .expect(401);
     });
 
-    // In mock environment, session auth may work for @BearerAuth routes
-    it('GET /api-keys/external/profile - should work with session auth in mock', async () => {
+    it('GET /api-keys/external/profile - should work with session auth', async () => {
       const response = await authenticatedRequest(app, userCookies)
         .get('/api-keys/external/profile')
         .expect(200);

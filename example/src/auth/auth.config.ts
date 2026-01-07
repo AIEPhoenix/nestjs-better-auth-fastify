@@ -101,7 +101,7 @@ export const auth = betterAuth({
 
     // ============================================
     // Bearer Plugin - Bearer Token authentication
-    // Provides: @BearerAuth
+    // Enables session auth via Authorization header (no decorator needed)
     // Suitable for mobile apps, CLI, and other cookie-less scenarios
     // ============================================
     bearer(),

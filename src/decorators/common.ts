@@ -47,12 +47,15 @@ export const PERMISSIONS_KEY = 'auth:permissions';
 export const FRESH_SESSION_KEY = 'auth:freshSession';
 export const ADMIN_ONLY_KEY = 'auth:adminOnly';
 export const BAN_CHECK_KEY = 'auth:banCheck';
-export const BEARER_AUTH_KEY = 'auth:bearerAuth';
 export const API_KEY_AUTH_KEY = 'auth:apiKeyAuth';
 export const DISALLOW_IMPERSONATION_KEY = 'auth:disallowImpersonation';
 export const ORG_REQUIRED_KEY = 'auth:orgRequired';
+export const LOAD_ORG_KEY = 'auth:loadOrg';
 export const ORG_ROLES_KEY = 'auth:orgRoles';
 export const ORG_PERMISSIONS_KEY = 'auth:orgPermissions';
+export const HOOK_KEY = Symbol('auth:hook');
+export const BEFORE_HOOK_KEY = Symbol('auth:beforeHook');
+export const AFTER_HOOK_KEY = Symbol('auth:afterHook');
 
 export interface RolesMetadata {
   roles: string[];
@@ -90,6 +93,12 @@ interface WsData {
   };
 }
 
+/**
+ * Extract FastifyRequest from NestJS ExecutionContext.
+ * Supports HTTP, GraphQL, and WebSocket contexts.
+ *
+ * @throws Error if GraphQL context detected but @nestjs/graphql not installed
+ */
 export function getRequestFromContext(ctx: ExecutionContext): FastifyRequest {
   const contextType = ctx.getType<string>();
 
@@ -113,6 +122,9 @@ export function getRequestFromContext(ctx: ExecutionContext): FastifyRequest {
     const client = wsContext.getClient<{ handshake?: WsData['handshake'] }>();
     if (client?.handshake?.headers) {
       return {
+        method: 'GET',
+        url: '/ws',
+        protocol: 'ws',
         headers: client.handshake.headers,
         session: null,
         user: null,

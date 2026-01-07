@@ -147,23 +147,19 @@ describe('ApiKeysController (e2e) - Real better-auth', () => {
     });
   });
 
-  describe('Bearer Token Authentication (@BearerAuth)', () => {
-    it('GET /api-keys/external/profile - should return 401 without Bearer token', async () => {
+  describe('Session Auth with Bearer Token support', () => {
+    it('GET /api-keys/external/profile - should return 401 without auth', async () => {
       await request(app.getHttpServer())
         .get('/api-keys/external/profile')
         .expect(401);
     });
 
-    it('GET /api-keys/external/profile - should return 401 with session auth (Bearer required)', async () => {
-      // This endpoint requires Bearer Token authentication, session auth should not work
+    it('GET /api-keys/external/profile - should work with session auth', async () => {
       const response = await authenticatedRequest(app, userCookies).get(
         '/api-keys/external/profile',
       );
 
-      // Depending on implementation, may return 401 or 200
-      // If @BearerAuth strictly requires Bearer Token, should be 401
-      // If Session Auth is allowed, should be 200
-      expect([200, 401]).toContain(response.status);
+      expect(response.status).toBe(200);
     });
 
     it('GET /api-keys/external/profile - should return 401 with invalid Bearer token', async () => {

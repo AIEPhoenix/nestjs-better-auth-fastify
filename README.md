@@ -1,7 +1,9 @@
 <p align="center">
   <img src="https://nestjs.com/img/logo-small.svg" width="50" alt="NestJS Logo" />
-  <span style="font-size: 40px; margin: 0 20px;">+</span>
+  <span style="font-size: 40px; margin: 0 15px;">+</span>
   <img src="https://www.better-auth.com/logo.png" width="50" alt="Better Auth Logo" />
+  <span style="font-size: 40px; margin: 0 15px;">+</span>
+  <img src="https://github.com/fastify/graphics/raw/HEAD/fastify-landscape-outlined.svg" width="140" alt="Fastify Logo" />
 </p>
 
 <h1 align="center">nestjs-better-auth-fastify</h1>
@@ -250,19 +252,14 @@ getDashboard() {}
 
 > Requires `bearer()` plugin from `better-auth/plugins`
 
+Bearer Token authentication is **automatically supported** when you add the `bearer()` plugin to Better Auth. No special decorator is needed - the default session auth will accept Bearer Token in the `Authorization` header.
+
 ```typescript
 import { bearer } from 'better-auth/plugins';
 
 export const auth = betterAuth({
   plugins: [bearer()],
 });
-```
-
-```typescript
-// Enable Bearer token authentication
-@BearerAuth()
-@Get('api/mobile/data')
-getMobileData() {}
 ```
 
 Client usage:
@@ -335,11 +332,12 @@ export const auth = betterAuth({
 });
 ```
 
-| Decorator               | Description                      |
-| ----------------------- | -------------------------------- |
-| `@OrgRequired()`        | Require organization context     |
-| `@OrgRoles(['owner'])`  | Require organization roles       |
-| `@OrgPermission({...})` | Require organization permissions |
+| Decorator               | Description                          |
+| ----------------------- | ------------------------------------ |
+| `@OrgRequired()`        | Require organization context         |
+| `@OptionalOrg()`        | Load org if available (not required) |
+| `@OrgRoles(['owner'])`  | Require organization roles           |
+| `@OrgPermission({...})` | Require organization permissions     |
 
 ```typescript
 // Require organization context
@@ -387,16 +385,17 @@ curl -H "x-organization-id: <org-id>" /org/dashboard
 
 ### Parameter Decorators
 
-| Decorator             | Description             | Type                      |
-| --------------------- | ----------------------- | ------------------------- |
-| `@Session()`          | Full session object     | `UserSession`             |
-| `@CurrentUser()`      | Current user            | `UserSession['user']`     |
-| `@UserProperty('id')` | Specific user property  | `string`                  |
-| `@ApiKey()`           | API Key info            | `ApiKeyValidation['key']` |
-| `@CurrentOrg()`       | Current organization    | `Organization`            |
-| `@OrgMember()`        | Organization membership | `OrganizationMember`      |
-| `@IsImpersonating()`  | Impersonation status    | `boolean`                 |
-| `@ImpersonatedBy()`   | Impersonator admin ID   | `string \| null`          |
+| Decorator                | Description               | Type                      |
+| ------------------------ | ------------------------- | ------------------------- |
+| `@Session()`             | Full session object       | `UserSession`             |
+| `@SessionProperty('id')` | Specific session property | `string`                  |
+| `@CurrentUser()`         | Current user              | `UserSession['user']`     |
+| `@UserProperty('id')`    | Specific user property    | `string`                  |
+| `@ApiKey()`              | API Key info              | `ApiKeyValidation['key']` |
+| `@CurrentOrg()`          | Current organization      | `Organization`            |
+| `@OrgMember()`           | Organization membership   | `OrganizationMember`      |
+| `@IsImpersonating()`     | Impersonation status      | `boolean`                 |
+| `@ImpersonatedBy()`      | Impersonator admin ID     | `string \| null`          |
 
 ```typescript
 @Get('me')
@@ -502,6 +501,121 @@ interface AuthContext {
   isImpersonating: boolean;
   impersonatedBy: string | null;
   apiKey: ApiKeyValidation['key'] | null;
+}
+```
+
+#### Data Availability by Decorator
+
+**Important:** Not all `AuthContext` properties are populated by default. Data availability depends on authentication method and decorators used:
+
+**Session Authentication** (default):
+
+| AuthContext Property | Availability          | Notes                                    |
+| -------------------- | --------------------- | ---------------------------------------- |
+| `session`            | ✅ Always             | Full session object                      |
+| `user`               | ✅ Always             | User from session                        |
+| `isImpersonating`    | ✅ Always             | From session data                        |
+| `impersonatedBy`     | ✅ Always             | Admin ID if impersonating                |
+| `organization`       | ⚠️ Requires decorator | Use `@OrgRequired()` or `@OptionalOrg()` |
+| `orgMember`          | ⚠️ Requires decorator | Use `@OrgRequired()` or `@OptionalOrg()` |
+| `apiKey`             | ❌ `null`             | Not applicable for session auth          |
+
+**API Key Authentication** (`@ApiKeyAuth()`):
+
+| AuthContext Property | Availability | Notes                        |
+| -------------------- | ------------ | ---------------------------- |
+| `session`            | ❌ `null`    | API Keys don't have sessions |
+| `user`               | ✅ Always    | Loaded via `key.userId`      |
+| `isImpersonating`    | ❌ `false`   | Not applicable for API Keys  |
+| `impersonatedBy`     | ❌ `null`    | Not applicable for API Keys  |
+| `organization`       | ❌ `null`    | Not loaded for API Key auth  |
+| `orgMember`          | ❌ `null`    | Not loaded for API Key auth  |
+| `apiKey`             | ✅ Always    | Full API Key info            |
+
+#### Creating Paired Decorators
+
+When creating a custom param decorator that uses organization or API key data, create a paired method decorator to ensure the data is loaded:
+
+```typescript
+import { applyDecorators } from '@nestjs/common';
+import {
+  createAuthParamDecorator,
+  OptionalOrg,
+  OrgRequired,
+  OrgRoles,
+  AuthContext,
+} from '@sapix/nestjs-better-auth-fastify';
+
+// 1. Define your context interface
+interface ResourceContext {
+  userId: string;
+  organizationId: string | null;
+  orgRole: string | null;
+  isOrgAdmin: boolean;
+}
+
+// 2. Create the param decorator
+export const ResourceCtx = createAuthParamDecorator<ResourceContext>(
+  (auth) => ({
+    userId: auth.user?.id ?? '',
+    organizationId: auth.organization?.id ?? null,
+    orgRole: auth.orgMember?.role ?? null,
+    isOrgAdmin:
+      auth.orgMember?.role === 'owner' || auth.orgMember?.role === 'admin',
+  }),
+);
+
+// 3. Create paired method decorators for different access levels
+export interface ResourceAccessOptions {
+  level?: 'user' | 'orgMember' | 'orgAdmin';
+  roles?: string[];
+}
+
+export function ResourceAccess(options: ResourceAccessOptions = {}) {
+  const { level = 'user', roles } = options;
+
+  switch (level) {
+    case 'orgAdmin':
+      return applyDecorators(OrgRequired(), OrgRoles(['owner', 'admin']));
+    case 'orgMember':
+      return roles?.length
+        ? applyDecorators(OrgRequired(), OrgRoles(roles))
+        : OrgRequired();
+    case 'user':
+    default:
+      return applyDecorators(OptionalOrg()); // Load org if available, but don't require
+  }
+}
+```
+
+**Usage with paired decorators:**
+
+```typescript
+@Controller('resources')
+export class ResourceController {
+  // User level - org data loaded if available
+  @ResourceAccess({ level: 'user' })
+  @Get('my')
+  getMyResources(@ResourceCtx() ctx: ResourceContext) {
+    if (ctx.organizationId) {
+      return this.service.getOrgResources(ctx.organizationId);
+    }
+    return this.service.getUserResources(ctx.userId);
+  }
+
+  // Org member level - org required
+  @ResourceAccess({ level: 'orgMember' })
+  @Get('org')
+  getOrgResources(@ResourceCtx() ctx: ResourceContext) {
+    return this.service.getOrgResources(ctx.organizationId!);
+  }
+
+  // Org admin level - org required + admin role
+  @ResourceAccess({ level: 'orgAdmin' })
+  @Put('org/settings')
+  updateOrgSettings(@ResourceCtx() ctx: ResourceContext) {
+    return this.service.updateSettings(ctx.organizationId!);
+  }
 }
 ```
 

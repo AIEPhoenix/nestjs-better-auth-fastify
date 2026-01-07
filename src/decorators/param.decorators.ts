@@ -4,6 +4,10 @@ import type { AuthContext } from '../auth.types';
 
 export type { AuthContext };
 
+// ============================================
+// Factory
+// ============================================
+
 export type AuthContextMapper<T> = (auth: AuthContext) => T;
 
 export function createAuthParamDecorator<T>(
@@ -24,12 +28,29 @@ export function createAuthParamDecorator<T>(
   });
 }
 
+// ============================================
+// Session
+// ============================================
+
 export const Session = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext) => {
     const request = getRequestFromContext(ctx);
     return request.session;
   },
 );
+
+export const SessionProperty = createParamDecorator(
+  (property: string, ctx: ExecutionContext) => {
+    const request = getRequestFromContext(ctx);
+    return request.session?.session?.[
+      property as keyof typeof request.session.session
+    ];
+  },
+);
+
+// ============================================
+// User
+// ============================================
 
 export const CurrentUser = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext) => {
@@ -45,12 +66,9 @@ export const UserProperty = createParamDecorator(
   },
 );
 
-export const ApiKey = createParamDecorator(
-  (_data: unknown, ctx: ExecutionContext) => {
-    const request = getRequestFromContext(ctx);
-    return request.apiKey;
-  },
-);
+// ============================================
+// Organization
+// ============================================
 
 export const CurrentOrg = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext) => {
@@ -66,6 +84,10 @@ export const OrgMember = createParamDecorator(
   },
 );
 
+// ============================================
+// Admin / Impersonation
+// ============================================
+
 export const IsImpersonating = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext) => {
     const request = getRequestFromContext(ctx);
@@ -77,5 +99,16 @@ export const ImpersonatedBy = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext) => {
     const request = getRequestFromContext(ctx);
     return request.impersonatedBy ?? null;
+  },
+);
+
+// ============================================
+// API Key
+// ============================================
+
+export const ApiKey = createParamDecorator(
+  (_data: unknown, ctx: ExecutionContext) => {
+    const request = getRequestFromContext(ctx);
+    return request.apiKey;
   },
 );

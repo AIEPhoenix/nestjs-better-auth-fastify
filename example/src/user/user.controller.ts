@@ -15,6 +15,7 @@ import {
   BanCheck,
   DisallowImpersonation,
   Session,
+  SessionProperty,
   CurrentUser,
   UserProperty,
   IsImpersonating,
@@ -370,6 +371,21 @@ export class UserController {
     return {
       emailVerified: verified,
       message: verified ? 'Your email is verified' : 'Please verify your email',
+    };
+  }
+
+  @Get('session-id')
+  @ApiBearerAuth('bearer')
+  @ApiOperation({
+    summary: 'Get session ID',
+    description: 'Demonstrates @SessionProperty() decorator to get session ID',
+  })
+  @ApiResponse({ status: 200, description: 'Session ID returned' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  getSessionId(@SessionProperty('id') sessionId: string) {
+    return {
+      sessionId,
+      message: 'Session ID retrieved using @SessionProperty decorator',
     };
   }
 

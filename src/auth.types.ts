@@ -451,14 +451,6 @@ export interface PermissionsOptions {
 }
 
 // ============================================
-// Symbols for Metadata
-// ============================================
-
-export const BEFORE_HOOK_KEY = Symbol('auth:beforeHook');
-export const AFTER_HOOK_KEY = Symbol('auth:afterHook');
-export const HOOK_KEY = Symbol('auth:hook');
-
-// ============================================
 // Request Extension
 // ============================================
 

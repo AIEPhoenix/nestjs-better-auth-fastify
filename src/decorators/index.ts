@@ -1,3 +1,11 @@
+// ============================================
+// Common / Utilities
+// ============================================
+export { getRequestFromContext } from './common';
+
+// ============================================
+// Metadata Keys
+// ============================================
 export {
   ALLOW_ANONYMOUS_KEY,
   OPTIONAL_AUTH_KEY,
@@ -6,21 +14,32 @@ export {
   FRESH_SESSION_KEY,
   ADMIN_ONLY_KEY,
   BAN_CHECK_KEY,
-  BEARER_AUTH_KEY,
-  API_KEY_AUTH_KEY,
   DISALLOW_IMPERSONATION_KEY,
+  API_KEY_AUTH_KEY,
   ORG_REQUIRED_KEY,
+  LOAD_ORG_KEY,
   ORG_ROLES_KEY,
   ORG_PERMISSIONS_KEY,
+  HOOK_KEY,
+  BEFORE_HOOK_KEY,
+  AFTER_HOOK_KEY,
+} from './common';
+
+// ============================================
+// Metadata Types
+// ============================================
+export type {
   RolesMetadata,
   PermissionsMetadata,
   FreshSessionMetadata,
   ApiKeyAuthMetadata,
   OrgRolesMetadata,
   OrgPermissionsMetadata,
-  getRequestFromContext,
 } from './common';
 
+// ============================================
+// Access Control Decorators
+// ============================================
 export {
   AllowAnonymous,
   OptionalAuth,
@@ -29,6 +48,9 @@ export {
   RequireFreshSession,
 } from './access-control.decorators';
 
+// ============================================
+// Admin Plugin Decorators
+// ============================================
 export {
   AdminOnly,
   BanCheck,
@@ -36,26 +58,56 @@ export {
   SecureAdminOnly,
 } from './admin.decorators';
 
-export { BearerAuth, ApiKeyAuth } from './api-key.decorators';
+// ============================================
+// API Key Decorators
+// ============================================
+export { ApiKeyAuth } from './api-key.decorators';
 
+// ============================================
+// Organization Plugin Decorators
+// ============================================
 export {
   OrgRequired,
+  OptionalOrg,
   OrgRoles,
   OrgPermission,
 } from './organization.decorators';
 
+// ============================================
+// Parameter Decorators - Factory
+// ============================================
 export {
-  Session,
-  CurrentUser,
-  UserProperty,
-  ApiKey,
-  CurrentOrg,
-  OrgMember,
-  IsImpersonating,
-  ImpersonatedBy,
   createAuthParamDecorator,
   type AuthContext,
   type AuthContextMapper,
 } from './param.decorators';
 
+// ============================================
+// Parameter Decorators - Session
+// ============================================
+export { Session, SessionProperty } from './param.decorators';
+
+// ============================================
+// Parameter Decorators - User
+// ============================================
+export { CurrentUser, UserProperty } from './param.decorators';
+
+// ============================================
+// Parameter Decorators - Organization
+// ============================================
+export { CurrentOrg, OrgMember } from './param.decorators';
+
+// ============================================
+// Parameter Decorators - Admin / Impersonation
+// ============================================
+export { IsImpersonating, ImpersonatedBy } from './param.decorators';
+
+// ============================================
+// Parameter Decorators - API Key
+// ============================================
+export { ApiKey } from './param.decorators';
+
+// ============================================
+// Hook Decorators
+// ============================================
 export { Hook, BeforeHook, AfterHook } from './hook.decorators';

@@ -36,6 +36,7 @@ import {
   API_KEY_AUTH_KEY,
   DISALLOW_IMPERSONATION_KEY,
   ORG_REQUIRED_KEY,
+  LOAD_ORG_KEY,
   ORG_ROLES_KEY,
   ORG_PERMISSIONS_KEY,
   getRequestFromContext,
@@ -46,7 +47,11 @@ import {
   OrgRolesMetadata,
   OrgPermissionsMetadata,
 } from './auth.decorators';
-import { toWebHeaders, getHeadersFromRequest } from './auth.utils';
+import {
+  toWebHeaders,
+  getHeadersFromRequest,
+  parseStringToArray,
+} from './auth.utils';
 
 /**
  * Better Auth API interface (subset used by AuthGuard)
@@ -249,7 +254,6 @@ function createError(
 // ============================================
 
 interface Metadata {
-  isPublic?: boolean;
   isOptional?: boolean;
   apiKeyAuth?: ApiKeyAuthMetadata;
   banCheck?: boolean;
@@ -259,6 +263,7 @@ interface Metadata {
   roles?: RolesMetadata;
   permissions?: PermissionsMetadata;
   orgRequired?: boolean;
+  loadOrg?: boolean;
   orgRoles?: OrgRolesMetadata;
   orgPermissions?: OrgPermissionsMetadata;
 }
@@ -319,10 +324,10 @@ const DEFAULT_API_KEY_HEADERS = ['x-api-key'];
  * - @RequireFreshSession() - Require fresh session
  * - @AdminOnly() - Admin only
  * - @BanCheck() - Check ban status
- * - @BearerAuth() - Bearer Token authentication
  * - @ApiKeyAuth() - API Key authentication
  * - @DisallowImpersonation() - Disallow impersonation
  * - @OrgRequired() - Require organization context
+ * - @OptionalOrg() - Load organization context if available (optional)
  * - @OrgRoles(['owner', 'admin']) - Organization role validation
  * - @OrgPermission({ resource, action }) - Organization permission validation
  *
@@ -337,19 +342,40 @@ export class AuthGuard implements CanActivate {
     private readonly options: AuthModuleOptions,
   ) {}
 
+  // Cache for Better Auth's internal adapter. Defensive caching in case
+  // $context is a getter returning new Promise instances per call.
+  private cachedInternalAdapter:
+    | Awaited<typeof this.auth.$context>['internalAdapter']
+    | null = null;
+  private async getAuthInternalAdapter(): Promise<
+    Awaited<typeof this.auth.$context>['internalAdapter']
+  > {
+    if (!this.cachedInternalAdapter) {
+      this.cachedInternalAdapter = (await this.auth.$context).internalAdapter;
+    }
+    return this.cachedInternalAdapter;
+  }
+
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = getRequestFromContext(context);
     const contextType = context.getType<string>() as ContextType;
     const errorMessages = this.options.errorMessages;
-    const metadata = this.getMetadata(context);
+    const targets = [context.getHandler(), context.getClass()];
 
-    // 1. Check @AllowAnonymous() first - Performance optimization
-    if (metadata.isPublic) {
+    // 1. Fast path: Check @AllowAnonymous() first (single reflector call)
+    const isPublic = this.reflector.getAllAndOverride<boolean>(
+      ALLOW_ANONYMOUS_KEY,
+      targets,
+    );
+    if (isPublic) {
       await this.tryAttachSession(request);
       return true;
     }
 
-    // 2. Try API Key authentication if configured
+    // 2. Get full metadata only for non-public routes
+    const metadata = this.getMetadata(targets);
+
+    // 3. Try API Key authentication if configured
     if (metadata.apiKeyAuth) {
       const apiKeyResult = await this.tryApiKeyAuth(request);
       if (apiKeyResult) {
@@ -382,10 +408,10 @@ export class AuthGuard implements CanActivate {
       }
     }
 
-    // 3. Get session (supports Cookie or Bearer Token via bearer plugin)
+    // 4. Get session (supports Cookie or Bearer Token via bearer plugin)
     const session = await this.getSession(request);
 
-    // 4. Attach to request
+    // 5. Attach to request
     request.session = session;
     request.user = session?.user ?? null;
 
@@ -397,7 +423,7 @@ export class AuthGuard implements CanActivate {
       request.impersonatedBy = impersonatedBy ?? null;
     }
 
-    // 5. Handle no session
+    // 6. Handle no session
     if (!session) {
       if (metadata.isOptional) {
         return true;
@@ -405,7 +431,7 @@ export class AuthGuard implements CanActivate {
       throw createError(contextType, 'UNAUTHORIZED', undefined, errorMessages);
     }
 
-    // 6. Run security checks (only if needed)
+    // 7. Run security checks (only if needed)
     this.runSecurityChecks(
       contextType,
       metadata,
@@ -414,10 +440,10 @@ export class AuthGuard implements CanActivate {
       errorMessages,
     );
 
-    // 7. Run authorization checks (only if needed)
+    // 8. Run authorization checks (only if needed)
     this.runAuthorizationChecks(contextType, metadata, session, errorMessages);
 
-    // 8. Run organization checks (only if needed)
+    // 9. Run organization checks (only if needed)
     await this.runOrganizationChecks(
       contextType,
       metadata,
@@ -429,14 +455,8 @@ export class AuthGuard implements CanActivate {
     return true;
   }
 
-  private getMetadata(context: ExecutionContext): Metadata {
-    const targets = [context.getHandler(), context.getClass()];
-
+  private getMetadata(targets: Function[]): Metadata {
     return {
-      isPublic: this.reflector.getAllAndOverride<boolean>(
-        ALLOW_ANONYMOUS_KEY,
-        targets,
-      ),
       isOptional: this.reflector.getAllAndOverride<boolean>(
         OPTIONAL_AUTH_KEY,
         targets,
@@ -472,6 +492,7 @@ export class AuthGuard implements CanActivate {
         ORG_REQUIRED_KEY,
         targets,
       ),
+      loadOrg: this.reflector.getAllAndOverride<boolean>(LOAD_ORG_KEY, targets),
       orgRoles: this.reflector.getAllAndOverride<OrgRolesMetadata>(
         ORG_ROLES_KEY,
         targets,
@@ -625,6 +646,7 @@ export class AuthGuard implements CanActivate {
     // Skip if no org decorators used
     if (
       !metadata.orgRequired &&
+      !metadata.loadOrg &&
       !metadata.orgRoles &&
       !metadata.orgPermissions
     ) {
@@ -924,6 +946,9 @@ export class AuthGuard implements CanActivate {
 
       if (result?.valid && result?.key) {
         request.apiKey = result.key;
+        const authInternalAdapter = await this.getAuthInternalAdapter();
+        const user = await authInternalAdapter.findUserById(result.key.userId);
+        request.user = user;
         return result.key.permissions ?? {};
       }
     } catch (error) {
@@ -998,49 +1023,34 @@ export class AuthGuard implements CanActivate {
     }
   }
 
-  /**
-   * Check if user has required roles
-   */
+  private checkArrayMembership(
+    userValues: string | string[] | undefined,
+    requiredValues: string[],
+    mode: 'any' | 'all',
+  ): boolean {
+    const values = parseStringToArray(userValues);
+    if (values.length === 0) {
+      return false;
+    }
+    return mode === 'all'
+      ? requiredValues.every((v) => values.includes(v))
+      : requiredValues.some((v) => values.includes(v));
+  }
+
   private checkUserRoles(
     userRole: string | string[] | undefined,
     requiredRoles: string[],
     mode: 'any' | 'all',
   ): boolean {
-    if (!userRole) {
-      return false;
-    }
-
-    const userRoles = Array.isArray(userRole)
-      ? userRole
-      : userRole.split(',').map((v) => v.trim());
-
-    return mode === 'all'
-      ? requiredRoles.every((role) => userRoles.includes(role))
-      : requiredRoles.some((role) => userRoles.includes(role));
+    return this.checkArrayMembership(userRole, requiredRoles, mode);
   }
 
-  /**
-   * Check if user has required organization roles
-   */
   private checkOrgRoles(
     memberRole: string | string[] | undefined,
     requiredRoles: string[],
     mode: 'any' | 'all',
   ): boolean {
-    if (!memberRole) {
-      return false;
-    }
-
-    const memberRoles = Array.isArray(memberRole)
-      ? memberRole
-      : memberRole
-          .split(',')
-          .map((v) => v.trim())
-          .filter(Boolean);
-
-    return mode === 'all'
-      ? requiredRoles.every((role) => memberRoles.includes(role))
-      : requiredRoles.some((role) => memberRoles.includes(role));
+    return this.checkArrayMembership(memberRole, requiredRoles, mode);
   }
 
   /**
@@ -1085,24 +1095,15 @@ export class AuthGuard implements CanActivate {
     return this.options.orgRolePermissions ?? DEFAULT_ORG_ROLE_PERMISSIONS;
   }
 
-  /**
-   * Check if user has required permissions
-   */
   private checkUserPermissions(
     userPermissions: string | string[] | undefined,
     requiredPermissions: string[],
     mode: 'any' | 'all',
   ): boolean {
-    if (!userPermissions) {
-      return false;
-    }
-
-    const permissions = Array.isArray(userPermissions)
-      ? userPermissions
-      : userPermissions.split(',').map((v) => v.trim());
-
-    return mode === 'all'
-      ? requiredPermissions.every((perm) => permissions.includes(perm))
-      : requiredPermissions.some((perm) => permissions.includes(perm));
+    return this.checkArrayMembership(
+      userPermissions,
+      requiredPermissions,
+      mode,
+    );
   }
 }

@@ -8,13 +8,8 @@ import type { HookEndpointContext, BetterAuthOptions } from 'better-auth';
 import type { AuthMiddleware } from 'better-auth/api';
 import { createAuthMiddleware } from 'better-auth/plugins';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import {
-  AUTH_MODULE_OPTIONS,
-  AuthModuleOptions,
-  HOOK_KEY,
-  BEFORE_HOOK_KEY,
-  AFTER_HOOK_KEY,
-} from './auth.types';
+import { AUTH_MODULE_OPTIONS, AuthModuleOptions } from './auth.types';
+import { HOOK_KEY, BEFORE_HOOK_KEY, AFTER_HOOK_KEY } from './decorators/common';
 import {
   toWebRequest,
   writeWebResponseToReply,
@@ -131,8 +126,13 @@ export class AuthBootstrapService implements OnModuleInit {
   }
 
   /**
-   * Hook method registration
-   * Wraps hooks with error handling to prevent one hook from breaking others
+   * Hook method registration.
+   *
+   * Error handling strategy (intentionally asymmetric):
+   * - Original hooks (from Better Auth config): Errors are logged but swallowed
+   *   to allow other hooks to execute. These are typically "fire and forget".
+   * - NestJS hooks (from @BeforeHook/@AfterHook): Errors are logged AND rethrown.
+   *   These hooks can control auth flow by throwing (e.g., block sign-up).
    */
   private registerHook(
     providerMethod: HookHandler,

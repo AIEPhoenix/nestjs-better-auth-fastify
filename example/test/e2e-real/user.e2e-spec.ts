@@ -101,6 +101,16 @@ describe('UserController (e2e) - Real better-auth', () => {
       expect(response.body).toHaveProperty('id');
       expect(response.body).toHaveProperty('name');
     });
+
+    it('GET /users/session-id - should return session ID using @SessionProperty', async () => {
+      const response = await authenticatedRequest(app, userCookies)
+        .get('/users/session-id')
+        .expect(200);
+
+      expect(response.body).toHaveProperty('sessionId');
+      expect(typeof response.body.sessionId).toBe('string');
+      expect(response.body.sessionId.length).toBeGreaterThan(0);
+    });
   });
 
   describe('Role-Based Access Control (@Roles)', () => {

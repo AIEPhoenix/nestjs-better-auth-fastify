@@ -19,7 +19,6 @@ import {
 } from '@nestjs/swagger';
 import {
   ApiKeyAuth,
-  BearerAuth,
   ApiKey,
   CurrentUser,
   Permissions,
@@ -204,11 +203,10 @@ export class ApiKeysController {
   }
 
   // ============================================
-  // Routes using Bearer Token authentication
+  // Routes supporting Bearer Token (via Better Auth bearer plugin)
   // ============================================
 
   @Get('external/profile')
-  @BearerAuth()
   @ApiBearerAuth('bearer')
   @ApiOperation({
     summary: 'Get external profile',

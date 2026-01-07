@@ -9,7 +9,11 @@ import {
   ApiKeyValidation,
   Organization,
 } from './auth.types';
-import { getWebHeadersFromRequest, normalizeBasePath } from './auth.utils';
+import {
+  getWebHeadersFromRequest,
+  normalizeBasePath,
+  parseStringToArray,
+} from './auth.utils';
 
 /**
  * Infer Session type from Better Auth instance
@@ -260,11 +264,10 @@ export class AuthService<T extends { api: T['api'] } = AuthWithApi> {
     mode: 'any' | 'all' = 'any',
   ): boolean {
     const userRole = session.user.role;
-    if (!userRole) {
+    const userRoles = parseStringToArray(userRole);
+    if (userRoles.length === 0) {
       return false;
     }
-
-    const userRoles = this.parseRoles(userRole);
 
     return mode === 'all'
       ? roles.every((role) => userRoles.includes(role))
@@ -294,11 +297,10 @@ export class AuthService<T extends { api: T['api'] } = AuthWithApi> {
       permissions?: string | string[];
     };
     const userPermissions = userWithPermissions.permissions;
-    if (!userPermissions) {
+    const permArray = parseStringToArray(userPermissions);
+    if (permArray.length === 0) {
       return false;
     }
-
-    const permArray = this.parseRoles(userPermissions);
 
     return mode === 'all'
       ? permissions.every((perm) => permArray.includes(perm))
@@ -592,23 +594,5 @@ export class AuthService<T extends { api: T['api'] } = AuthWithApi> {
     } catch {
       return false;
     }
-  }
-
-  /**
-   * Parse roles/permissions string or array to array
-   * Optimized to avoid unnecessary array creation
-   * Handles empty strings by returning empty array
-   */
-  private parseRoles(value: string | string[]): string[] {
-    if (Array.isArray(value)) {
-      return value;
-    }
-    if (!value) {
-      return [];
-    }
-    return value
-      .split(',')
-      .map((v) => v.trim())
-      .filter(Boolean);
   }
 }

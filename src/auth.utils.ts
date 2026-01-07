@@ -20,13 +20,14 @@ export function toWebHeaders(
   const webHeaders = new Headers();
 
   for (const key in headers) {
-    const value = headers[key];
-    if (value != null) {
-      // Use != to check for both null and undefined
-      webHeaders.append(
-        key,
-        Array.isArray(value) ? value.join(', ') : String(value),
-      );
+    if (Object.hasOwn(headers, key)) {
+      const value = headers[key];
+      if (value != null) {
+        webHeaders.append(
+          key,
+          Array.isArray(value) ? value.join(', ') : String(value),
+        );
+      }
     }
   }
 
@@ -89,7 +90,8 @@ export function getWebHeadersFromRequest(request: FastifyRequest): Headers {
 export function toWebRequest(request: FastifyRequest): Request {
   // 1. Build URL - use template string for performance
   const host = request.headers.host ?? 'localhost';
-  const url = `${request.protocol}://${host}${request.url}`;
+  const protocol = request.protocol || 'http';
+  const url = `${protocol}://${host}${request.url}`;
 
   // 2. Convert Headers
   const headers = toWebHeaders(request.headers);
@@ -187,4 +189,33 @@ export function normalizeBasePath(basePath: string): string {
   }
 
   return normalized;
+}
+
+/**
+ * Parse a string or string array into a normalized string array
+ * Handles comma-separated values in strings
+ *
+ * @param value - String, string array, or undefined
+ * @returns Normalized string array
+ *
+ * @example
+ * ```typescript
+ * parseStringToArray('admin,user') // ['admin', 'user']
+ * parseStringToArray(['admin', 'user']) // ['admin', 'user']
+ * parseStringToArray(undefined) // []
+ * ```
+ */
+export function parseStringToArray(
+  value: string | string[] | undefined,
+): string[] {
+  if (!value) {
+    return [];
+  }
+  if (Array.isArray(value)) {
+    return value;
+  }
+  return value
+    .split(',')
+    .map((v) => v.trim())
+    .filter(Boolean);
 }
