@@ -536,7 +536,11 @@ interface AuthContext {
 
 #### 创建配套装饰器
 
-当创建使用组织数据的自定义参数装饰器时，需要创建**配套**的方法装饰器来确保数据正确加载。命名约定 `XxxCtx` + `XxxAccess` 使配套关系一目了然。
+当创建使用组织数据的自定义参数装饰器时，需要创建**配套**的方法装饰器来确保数据正确加载。命名约定：
+
+- `XxxAuth` - 方法装饰器：声明**授权要求**（需要什么认证/权限）
+- `XxxAuthState` - 参数装饰器：提取**授权状态**（提取认证上下文数据）
+- `XxxAuthStateInfo` - 接口：定义状态类型（添加 `Info` 后缀避免与装饰器命名冲突）
 
 ```typescript
 import { applyDecorators } from '@nestjs/common';
@@ -546,19 +550,18 @@ import {
   OrgRequired,
   OrgRoles,
   RequireAuth,
-  AuthContext,
 } from '@sapix/nestjs-better-auth-fastify';
 
-// 1. 定义上下文接口
-interface ResourceContext {
+// 1. 定义授权状态接口（使用 "Info" 后缀避免与装饰器命名冲突）
+interface ResourceAuthStateInfo {
   userId: string;
   organizationId: string | null;
   orgRole: string | null;
   isOrgAdmin: boolean;
 }
 
-// 2. 创建参数装饰器：@ResourceCtx()
-export const ResourceCtx = createAuthParamDecorator<ResourceContext>(
+// 2. 创建参数装饰器：@ResourceAuthState() - 提取授权状态
+export const ResourceAuthState = createAuthParamDecorator<ResourceAuthStateInfo>(
   (auth) => ({
     userId: auth.user?.id ?? '',
     organizationId: auth.organization?.id ?? null,
@@ -568,13 +571,13 @@ export const ResourceCtx = createAuthParamDecorator<ResourceContext>(
   }),
 );
 
-// 3. 创建配套方法装饰器：@ResourceAccess()
-export interface ResourceAccessOptions {
+// 3. 创建配套方法装饰器：@ResourceAuth() - 声明授权要求
+export interface ResourceAuthOptions {
   requireOrg?: boolean;
   orgRoles?: string[];
 }
 
-export function ResourceAccess(options: ResourceAccessOptions = {}) {
+export function ResourceAuth(options: ResourceAuthOptions = {}) {
   const { requireOrg = false, orgRoles } = options;
 
   // 指定组织角色 -> 需要组织 + 特定角色
@@ -593,82 +596,116 @@ export function ResourceAccess(options: ResourceAccessOptions = {}) {
 }
 ```
 
-**用法 - 始终将 `@ResourceAccess()` 与 `@ResourceCtx()` 配套使用：**
+**用法 - 始终将 `@ResourceAuth()` 与 `@ResourceAuthState()` 配套使用：**
 
 ```typescript
 @Controller('resources')
 export class ResourceController {
   // 默认：需要认证，如可用则加载组织
-  @ResourceAccess()
+  @ResourceAuth()
   @Get('my')
-  getMyResources(@ResourceCtx() ctx: ResourceContext) {
-    if (ctx.organizationId) {
-      return this.service.getOrgResources(ctx.organizationId);
+  getMyResources(@ResourceAuthState() state: ResourceAuthStateInfo) {
+    if (state.organizationId) {
+      return this.service.getOrgResources(state.organizationId);
     }
-    return this.service.getUserResources(ctx.userId);
+    return this.service.getUserResources(state.userId);
   }
 
   // 需要认证 + 组织上下文
-  @ResourceAccess({ requireOrg: true })
+  @ResourceAuth({ requireOrg: true })
   @Get('org')
-  getOrgResources(@ResourceCtx() ctx: ResourceContext) {
-    return this.service.getOrgResources(ctx.organizationId!);
+  getOrgResources(@ResourceAuthState() state: ResourceAuthStateInfo) {
+    return this.service.getOrgResources(state.organizationId!);
   }
 
   // 需要认证 + 组织 + 管理员角色
-  @ResourceAccess({ orgRoles: ['owner', 'admin'] })
+  @ResourceAuth({ orgRoles: ['owner', 'admin'] })
   @Put('org/settings')
-  updateOrgSettings(@ResourceCtx() ctx: ResourceContext) {
-    return this.service.updateSettings(ctx.organizationId!);
+  updateOrgSettings(@ResourceAuthState() state: ResourceAuthStateInfo) {
+    return this.service.updateSettings(state.organizationId!);
   }
 }
 ```
 
-> **注意**：默认的 `@ResourceAccess()` 使用 `RequireAuth()` 确保认证，不受 `defaultAuthBehavior` 设置影响。这使装饰器行为可预测且独立于全局配置。
+> **注意**：默认的 `@ResourceAuth()` 使用 `RequireAuth()` 确保认证，不受 `defaultAuthBehavior` 设置影响。这使装饰器行为可预测且独立于全局配置。
 
 #### 实际示例
 
-**多租户上下文：**
+**多租户：**
 
 ```typescript
-interface TenantContext {
+// 状态接口
+interface TenantAuthStateInfo {
   userId: string;
   tenantId: string | null;
   tenantRole: string;
   isTenantAdmin: boolean;
 }
 
-const TenantCtx = createAuthParamDecorator<TenantContext>((auth) => ({
+// 参数装饰器：提取租户状态
+const TenantAuthState = createAuthParamDecorator<TenantAuthStateInfo>((auth) => ({
   userId: auth.user?.id ?? 'anonymous',
   tenantId: auth.organization?.id ?? null,
   tenantRole: auth.orgMember?.role ?? 'none',
   isTenantAdmin:
     auth.orgMember?.role === 'owner' || auth.orgMember?.role === 'admin',
 }));
+
+// 方法装饰器：声明租户授权要求
+interface TenantAuthOptions {
+  requireTenant?: boolean;
+  roles?: string[];
+}
+
+function TenantAuth(options: TenantAuthOptions = {}) {
+  const { requireTenant = true, roles } = options;
+  if (roles?.length) {
+    return applyDecorators(OrgRequired(), OrgRoles(roles));
+  }
+  return requireTenant ? OrgRequired() : applyDecorators(RequireAuth(), OptionalOrg());
+}
+
+// 用法
+@TenantAuth()
+@Get('tenant/dashboard')
+getDashboard(@TenantAuthState() tenant: TenantAuthStateInfo) { ... }
 ```
 
-**审计上下文：**
+**审计追踪：**
 
 ```typescript
-interface AuditContext {
+// 状态接口
+interface AuditAuthStateInfo {
   actorId: string;
   actorType: 'user' | 'apiKey' | 'system';
   impersonatorId: string | null;
   timestamp: string;
 }
 
-const AuditCtx = createAuthParamDecorator<AuditContext>((auth) => ({
+// 参数装饰器：提取审计上下文
+const AuditAuthState = createAuthParamDecorator<AuditAuthStateInfo>((auth) => ({
   actorId: auth.apiKey?.userId ?? auth.user?.id ?? 'system',
   actorType: auth.apiKey ? 'apiKey' : auth.user ? 'user' : 'system',
   impersonatorId: auth.impersonatedBy,
   timestamp: new Date().toISOString(),
 }));
+
+// 方法装饰器：审计路由允许可选认证（系统操作也需要审计）
+function AuditAuth() {
+  return OptionalAuth();
+}
+
+// 用法
+@AuditAuth()
+@Post('events')
+logEvent(@AuditAuthState() audit: AuditAuthStateInfo) { ... }
 ```
 
-**服务层上下文：**
+**服务层：**
 
 ```typescript
-interface ServiceContext {
+// 状态接口
+interface ServiceAuthStateInfo {
   requesterId: string;
   scope: {
     orgId: string | null;
@@ -676,7 +713,8 @@ interface ServiceContext {
   };
 }
 
-const ServiceCtx = createAuthParamDecorator<ServiceContext>((auth) => {
+// 参数装饰器：提取服务上下文
+const ServiceAuthState = createAuthParamDecorator<ServiceAuthStateInfo>((auth) => {
   const permissions = ['read'];
   if ((auth.user as any)?.role === 'admin') {
     permissions.push('write', 'delete');
@@ -689,19 +727,16 @@ const ServiceCtx = createAuthParamDecorator<ServiceContext>((auth) => {
     },
   };
 });
-```
 
-#### 组合多个装饰器
-
-```typescript
-@Get('dashboard')
-getDashboard(
-  @RequestCtx() request: RequestContext,
-  @AuditCtx() audit: AuditContext,
-) {
-  this.logger.log('Dashboard accessed', audit);
-  return this.dashboardService.getData(request);
+// 方法装饰器：服务路由需要认证并可选加载组织
+function ServiceAuth() {
+  return applyDecorators(RequireAuth(), OptionalOrg());
 }
+
+// 用法
+@ServiceAuth()
+@Get('data')
+getData(@ServiceAuthState() ctx: ServiceAuthStateInfo) { ... }
 ```
 
 ## 🪝 Hook 系统

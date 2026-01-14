@@ -536,7 +536,10 @@ interface AuthContext {
 
 #### Creating Paired Decorators
 
-When creating a custom param decorator that uses organization data, create a **paired** method decorator to ensure proper data loading. The naming convention `XxxCtx` + `XxxAccess` makes the pairing clear.
+When creating a custom param decorator that uses organization data, create a **paired** method decorator to ensure proper data loading. The naming convention helps clarify the purpose:
+
+- **Method decorator** (`@ResourceAuth`): Declares **auth requirements** - what authorization is needed
+- **Param decorator** (`@ResourceAuthState`): Extracts **auth state** - the authorization context data
 
 ```typescript
 import { applyDecorators } from '@nestjs/common';
@@ -549,16 +552,16 @@ import {
   AuthContext,
 } from '@sapix/nestjs-better-auth-fastify';
 
-// 1. Define your context interface
-interface ResourceContext {
+// 1. Define your auth state interface (use "Info" suffix to avoid naming conflict)
+interface ResourceAuthStateInfo {
   userId: string;
   organizationId: string | null;
   orgRole: string | null;
   isOrgAdmin: boolean;
 }
 
-// 2. Create the param decorator: @ResourceCtx()
-export const ResourceCtx = createAuthParamDecorator<ResourceContext>(
+// 2. Create the param decorator: @ResourceAuthState() - extracts auth state
+export const ResourceAuthState = createAuthParamDecorator<ResourceAuthStateInfo>(
   (auth) => ({
     userId: auth.user?.id ?? '',
     organizationId: auth.organization?.id ?? null,
@@ -568,13 +571,13 @@ export const ResourceCtx = createAuthParamDecorator<ResourceContext>(
   }),
 );
 
-// 3. Create the paired method decorator: @ResourceAccess()
-export interface ResourceAccessOptions {
+// 3. Create the paired method decorator: @ResourceAuth() - declares auth requirements
+export interface ResourceAuthOptions {
   requireOrg?: boolean;
   orgRoles?: string[];
 }
 
-export function ResourceAccess(options: ResourceAccessOptions = {}) {
+export function ResourceAuth(options: ResourceAuthOptions = {}) {
   const { requireOrg = false, orgRoles } = options;
 
   // With org roles -> requires org + specific roles
@@ -593,82 +596,116 @@ export function ResourceAccess(options: ResourceAccessOptions = {}) {
 }
 ```
 
-**Usage - always pair `@ResourceAccess()` with `@ResourceCtx()`:**
+**Usage - pair `@ResourceAuth()` (requirements) with `@ResourceAuthState()` (state):**
 
 ```typescript
 @Controller('resources')
 export class ResourceController {
   // Default: requires auth, org loaded if available
-  @ResourceAccess()
+  @ResourceAuth()
   @Get('my')
-  getMyResources(@ResourceCtx() ctx: ResourceContext) {
-    if (ctx.organizationId) {
-      return this.service.getOrgResources(ctx.organizationId);
+  getMyResources(@ResourceAuthState() state: ResourceAuthStateInfo) {
+    if (state.organizationId) {
+      return this.service.getOrgResources(state.organizationId);
     }
-    return this.service.getUserResources(ctx.userId);
+    return this.service.getUserResources(state.userId);
   }
 
   // Requires auth + org context
-  @ResourceAccess({ requireOrg: true })
+  @ResourceAuth({ requireOrg: true })
   @Get('org')
-  getOrgResources(@ResourceCtx() ctx: ResourceContext) {
-    return this.service.getOrgResources(ctx.organizationId!);
+  getOrgResources(@ResourceAuthState() state: ResourceAuthStateInfo) {
+    return this.service.getOrgResources(state.organizationId!);
   }
 
   // Requires auth + org + admin role
-  @ResourceAccess({ orgRoles: ['owner', 'admin'] })
+  @ResourceAuth({ orgRoles: ['owner', 'admin'] })
   @Put('org/settings')
-  updateOrgSettings(@ResourceCtx() ctx: ResourceContext) {
-    return this.service.updateSettings(ctx.organizationId!);
+  updateOrgSettings(@ResourceAuthState() state: ResourceAuthStateInfo) {
+    return this.service.updateSettings(state.organizationId!);
   }
 }
 ```
 
-> **Note**: The default `@ResourceAccess()` uses `RequireAuth()` to ensure authentication regardless of `defaultAuthBehavior` setting. This makes the decorator behavior predictable and independent of global configuration.
+> **Note**: The default `@ResourceAuth()` uses `RequireAuth()` to ensure authentication regardless of `defaultAuthBehavior` setting. This makes the decorator behavior predictable and independent of global configuration.
 
 #### Real-World Examples
 
-**Multi-Tenant Context:**
+**Multi-Tenant:**
 
 ```typescript
-interface TenantContext {
+// State interface
+interface TenantAuthStateInfo {
   userId: string;
   tenantId: string | null;
   tenantRole: string;
   isTenantAdmin: boolean;
 }
 
-const TenantCtx = createAuthParamDecorator<TenantContext>((auth) => ({
+// Param decorator: extracts tenant state
+const TenantAuthState = createAuthParamDecorator<TenantAuthStateInfo>((auth) => ({
   userId: auth.user?.id ?? 'anonymous',
   tenantId: auth.organization?.id ?? null,
   tenantRole: auth.orgMember?.role ?? 'none',
   isTenantAdmin:
     auth.orgMember?.role === 'owner' || auth.orgMember?.role === 'admin',
 }));
+
+// Method decorator: declares tenant auth requirements
+interface TenantAuthOptions {
+  requireTenant?: boolean;
+  roles?: string[];
+}
+
+function TenantAuth(options: TenantAuthOptions = {}) {
+  const { requireTenant = true, roles } = options;
+  if (roles?.length) {
+    return applyDecorators(OrgRequired(), OrgRoles(roles));
+  }
+  return requireTenant ? OrgRequired() : applyDecorators(RequireAuth(), OptionalOrg());
+}
+
+// Usage
+@TenantAuth()
+@Get('tenant/dashboard')
+getDashboard(@TenantAuthState() tenant: TenantAuthStateInfo) { ... }
 ```
 
-**Audit Context:**
+**Audit Trail:**
 
 ```typescript
-interface AuditContext {
+// State interface
+interface AuditAuthStateInfo {
   actorId: string;
   actorType: 'user' | 'apiKey' | 'system';
   impersonatorId: string | null;
   timestamp: string;
 }
 
-const AuditCtx = createAuthParamDecorator<AuditContext>((auth) => ({
+// Param decorator: extracts audit context
+const AuditAuthState = createAuthParamDecorator<AuditAuthStateInfo>((auth) => ({
   actorId: auth.apiKey?.userId ?? auth.user?.id ?? 'system',
   actorType: auth.apiKey ? 'apiKey' : auth.user ? 'user' : 'system',
   impersonatorId: auth.impersonatedBy,
   timestamp: new Date().toISOString(),
 }));
+
+// Method decorator: audit routes allow optional auth (system actions are also audited)
+function AuditAuth() {
+  return OptionalAuth();
+}
+
+// Usage
+@AuditAuth()
+@Post('events')
+logEvent(@AuditAuthState() audit: AuditAuthStateInfo) { ... }
 ```
 
-**Service Layer Context:**
+**Service Layer:**
 
 ```typescript
-interface ServiceContext {
+// State interface
+interface ServiceAuthStateInfo {
   requesterId: string;
   scope: {
     orgId: string | null;
@@ -676,7 +713,8 @@ interface ServiceContext {
   };
 }
 
-const ServiceCtx = createAuthParamDecorator<ServiceContext>((auth) => {
+// Param decorator: extracts service context
+const ServiceAuthState = createAuthParamDecorator<ServiceAuthStateInfo>((auth) => {
   const permissions = ['read'];
   if ((auth.user as any)?.role === 'admin') {
     permissions.push('write', 'delete');
@@ -689,19 +727,16 @@ const ServiceCtx = createAuthParamDecorator<ServiceContext>((auth) => {
     },
   };
 });
-```
 
-#### Combining Multiple Decorators
-
-```typescript
-@Get('dashboard')
-getDashboard(
-  @RequestCtx() request: RequestContext,
-  @AuditCtx() audit: AuditContext,
-) {
-  this.logger.log('Dashboard accessed', audit);
-  return this.dashboardService.getData(request);
+// Method decorator: service routes require auth with optional org
+function ServiceAuth() {
+  return applyDecorators(RequireAuth(), OptionalOrg());
 }
+
+// Usage
+@ServiceAuth()
+@Get('data')
+getData(@ServiceAuthState() ctx: ServiceAuthStateInfo) { ... }
 ```
 
 ## 🪝 Hook System
