@@ -3,6 +3,7 @@ import { ExecutionContext } from '@nestjs/common';
 import {
   AllowAnonymous,
   OptionalAuth,
+  RequireAuth,
   Roles,
   Permissions,
   RequireFreshSession,
@@ -20,9 +21,19 @@ import {
   AfterHook,
   getRequestFromContext,
   createAuthParamDecorator,
+  Session,
+  SessionProperty,
+  CurrentUser,
+  UserProperty,
+  CurrentOrg,
+  OrgMember,
+  IsImpersonating,
+  ImpersonatedBy,
+  ApiKey,
   type AuthContext,
   ALLOW_ANONYMOUS_KEY,
   OPTIONAL_AUTH_KEY,
+  REQUIRE_AUTH_KEY,
   ROLES_KEY,
   PERMISSIONS_KEY,
   FRESH_SESSION_KEY,
@@ -38,12 +49,14 @@ import {
   BEFORE_HOOK_KEY,
   AFTER_HOOK_KEY,
 } from '@sapix/nestjs-better-auth-fastify';
+import { ROUTE_ARGS_METADATA } from '@nestjs/common/constants';
 
 describe('auth.decorators', () => {
   describe('Metadata Keys', () => {
     it('should export all metadata keys', () => {
       expect(ALLOW_ANONYMOUS_KEY).toBe('auth:allowAnonymous');
       expect(OPTIONAL_AUTH_KEY).toBe('auth:optional');
+      expect(REQUIRE_AUTH_KEY).toBe('auth:requireAuth');
       expect(ROLES_KEY).toBe('auth:roles');
       expect(PERMISSIONS_KEY).toBe('auth:permissions');
       expect(FRESH_SESSION_KEY).toBe('auth:freshSession');
@@ -64,6 +77,9 @@ describe('auth.decorators', () => {
 
       @OptionalAuth()
       optionalAuthMethod() {}
+
+      @RequireAuth()
+      requireAuthMethod() {}
 
       @Roles(['admin', 'moderator'])
       rolesMethod() {}
@@ -132,17 +148,15 @@ describe('auth.decorators', () => {
     }
 
     let reflector: Reflector;
-    let controller: TestController;
 
     beforeEach(() => {
       reflector = new Reflector();
-      controller = new TestController();
     });
 
     it('@AllowAnonymous should set metadata to true', () => {
       const metadata = reflector.get(
         ALLOW_ANONYMOUS_KEY,
-        controller.allowAnonymousMethod,
+        TestController.prototype.allowAnonymousMethod,
       );
       expect(metadata).toBe(true);
     });
@@ -150,13 +164,24 @@ describe('auth.decorators', () => {
     it('@OptionalAuth should set metadata to true', () => {
       const metadata = reflector.get(
         OPTIONAL_AUTH_KEY,
-        controller.optionalAuthMethod,
+        TestController.prototype.optionalAuthMethod,
+      );
+      expect(metadata).toBe(true);
+    });
+
+    it('@RequireAuth should set metadata to true', () => {
+      const metadata = reflector.get(
+        REQUIRE_AUTH_KEY,
+        TestController.prototype.requireAuthMethod,
       );
       expect(metadata).toBe(true);
     });
 
     it('@Roles should set roles metadata with default options', () => {
-      const metadata = reflector.get(ROLES_KEY, controller.rolesMethod);
+      const metadata = reflector.get(
+        ROLES_KEY,
+        TestController.prototype.rolesMethod,
+      );
       expect(metadata).toEqual({
         roles: ['admin', 'moderator'],
         options: { mode: 'any' },
@@ -164,7 +189,10 @@ describe('auth.decorators', () => {
     });
 
     it('@Roles should set roles metadata with custom options', () => {
-      const metadata = reflector.get(ROLES_KEY, controller.rolesAllModeMethod);
+      const metadata = reflector.get(
+        ROLES_KEY,
+        TestController.prototype.rolesAllModeMethod,
+      );
       expect(metadata).toEqual({
         roles: ['admin', 'verified'],
         options: { mode: 'all', message: 'Custom message' },
@@ -174,7 +202,7 @@ describe('auth.decorators', () => {
     it('@Permissions should set permissions metadata with default options', () => {
       const metadata = reflector.get(
         PERMISSIONS_KEY,
-        controller.permissionsMethod,
+        TestController.prototype.permissionsMethod,
       );
       expect(metadata).toEqual({
         permissions: ['user:read', 'user:write'],
@@ -185,7 +213,7 @@ describe('auth.decorators', () => {
     it('@Permissions should set permissions metadata with custom options', () => {
       const metadata = reflector.get(
         PERMISSIONS_KEY,
-        controller.permissionsAllModeMethod,
+        TestController.prototype.permissionsAllModeMethod,
       );
       expect(metadata).toEqual({
         permissions: ['read', 'write'],
@@ -196,7 +224,7 @@ describe('auth.decorators', () => {
     it('@RequireFreshSession should set metadata with default options', () => {
       const metadata = reflector.get(
         FRESH_SESSION_KEY,
-        controller.freshSessionMethod,
+        TestController.prototype.freshSessionMethod,
       );
       expect(metadata).toEqual({ options: {} });
     });
@@ -204,7 +232,7 @@ describe('auth.decorators', () => {
     it('@RequireFreshSession should set metadata with custom options', () => {
       const metadata = reflector.get(
         FRESH_SESSION_KEY,
-        controller.freshSessionCustomMethod,
+        TestController.prototype.freshSessionCustomMethod,
       );
       expect(metadata).toEqual({
         options: { maxAge: 300, message: 'Re-auth required' },
@@ -214,7 +242,7 @@ describe('auth.decorators', () => {
     it('@AdminOnly should set metadata', () => {
       const metadata = reflector.get(
         ADMIN_ONLY_KEY,
-        controller.adminOnlyMethod,
+        TestController.prototype.adminOnlyMethod,
       );
       expect(metadata).toEqual({ message: undefined });
     });
@@ -222,20 +250,23 @@ describe('auth.decorators', () => {
     it('@AdminOnly should set metadata with custom message', () => {
       const metadata = reflector.get(
         ADMIN_ONLY_KEY,
-        controller.adminOnlyCustomMethod,
+        TestController.prototype.adminOnlyCustomMethod,
       );
       expect(metadata).toEqual({ message: 'Custom admin message' });
     });
 
     it('@BanCheck should set metadata to true', () => {
-      const metadata = reflector.get(BAN_CHECK_KEY, controller.banCheckMethod);
+      const metadata = reflector.get(
+        BAN_CHECK_KEY,
+        TestController.prototype.banCheckMethod,
+      );
       expect(metadata).toBe(true);
     });
 
     it('@DisallowImpersonation should set metadata', () => {
       const metadata = reflector.get(
         DISALLOW_IMPERSONATION_KEY,
-        controller.disallowImpersonationMethod,
+        TestController.prototype.disallowImpersonationMethod,
       );
       expect(metadata).toEqual({ message: undefined });
     });
@@ -243,7 +274,7 @@ describe('auth.decorators', () => {
     it('@DisallowImpersonation should set metadata with custom message', () => {
       const metadata = reflector.get(
         DISALLOW_IMPERSONATION_KEY,
-        controller.disallowImpersonationCustomMethod,
+        TestController.prototype.disallowImpersonationCustomMethod,
       );
       expect(metadata).toEqual({ message: 'No impersonation allowed' });
     });
@@ -251,7 +282,7 @@ describe('auth.decorators', () => {
     it('@ApiKeyAuth should set metadata with default options', () => {
       const metadata = reflector.get(
         API_KEY_AUTH_KEY,
-        controller.apiKeyAuthMethod,
+        TestController.prototype.apiKeyAuthMethod,
       );
       expect(metadata).toEqual({});
     });
@@ -259,7 +290,7 @@ describe('auth.decorators', () => {
     it('@ApiKeyAuth should set metadata with allowSession option', () => {
       const metadata = reflector.get(
         API_KEY_AUTH_KEY,
-        controller.apiKeyAuthWithSessionMethod,
+        TestController.prototype.apiKeyAuthWithSessionMethod,
       );
       expect(metadata).toEqual({ allowSession: true });
     });
@@ -267,7 +298,7 @@ describe('auth.decorators', () => {
     it('@ApiKeyAuth should set metadata with permissions option', () => {
       const metadata = reflector.get(
         API_KEY_AUTH_KEY,
-        controller.apiKeyAuthWithPermissionsMethod,
+        TestController.prototype.apiKeyAuthWithPermissionsMethod,
       );
       expect(metadata).toEqual({
         permissions: {
@@ -280,7 +311,7 @@ describe('auth.decorators', () => {
     it('@OrgRequired should set metadata to true', () => {
       const metadata = reflector.get(
         ORG_REQUIRED_KEY,
-        controller.orgRequiredMethod,
+        TestController.prototype.orgRequiredMethod,
       );
       expect(metadata).toBe(true);
     });
@@ -288,13 +319,16 @@ describe('auth.decorators', () => {
     it('@OptionalOrg should set metadata to true', () => {
       const metadata = reflector.get(
         LOAD_ORG_KEY,
-        controller.optionalOrgMethod,
+        TestController.prototype.optionalOrgMethod,
       );
       expect(metadata).toBe(true);
     });
 
     it('@OrgRoles should set metadata with default options', () => {
-      const metadata = reflector.get(ORG_ROLES_KEY, controller.orgRolesMethod);
+      const metadata = reflector.get(
+        ORG_ROLES_KEY,
+        TestController.prototype.orgRolesMethod,
+      );
       expect(metadata).toEqual({
         roles: ['owner', 'admin'],
         options: { mode: 'any' },
@@ -304,7 +338,7 @@ describe('auth.decorators', () => {
     it('@OrgRoles should set metadata with custom options', () => {
       const metadata = reflector.get(
         ORG_ROLES_KEY,
-        controller.orgRolesAllModeMethod,
+        TestController.prototype.orgRolesAllModeMethod,
       );
       expect(metadata).toEqual({
         roles: ['admin', 'billing'],
@@ -315,7 +349,7 @@ describe('auth.decorators', () => {
     it('@OrgPermission should set metadata', () => {
       const metadata = reflector.get(
         ORG_PERMISSIONS_KEY,
-        controller.orgPermissionMethod,
+        TestController.prototype.orgPermissionMethod,
       );
       expect(metadata).toEqual({
         options: { resource: 'member', action: 'create' },
@@ -325,15 +359,15 @@ describe('auth.decorators', () => {
     it('@SecureAdminOnly should apply multiple decorators', () => {
       const adminOnly = reflector.get(
         ADMIN_ONLY_KEY,
-        controller.secureAdminOnlyMethod,
+        TestController.prototype.secureAdminOnlyMethod,
       );
       const freshSession = reflector.get(
         FRESH_SESSION_KEY,
-        controller.secureAdminOnlyMethod,
+        TestController.prototype.secureAdminOnlyMethod,
       );
       const disallowImpersonation = reflector.get(
         DISALLOW_IMPERSONATION_KEY,
-        controller.secureAdminOnlyMethod,
+        TestController.prototype.secureAdminOnlyMethod,
       );
 
       expect(adminOnly).toBeDefined();
@@ -482,26 +516,6 @@ describe('auth.decorators', () => {
           getRequest: jest.fn().mockReturnValue(request),
         }),
       }) as unknown as ExecutionContext;
-
-    // Helper to get the factory function from a param decorator
-    const getDecoratorFactory = (decorator: any) => {
-      const metadata = Reflect.getMetadata('custom:paramtype', decorator);
-      return (
-        decorator.factory ||
-        (() => {
-          // For createParamDecorator, the factory is stored differently
-          // We need to call the decorator to get the factory
-          const testTarget = {};
-          const testKey = 'testMethod';
-          decorator(testTarget, testKey, 0);
-          return Reflect.getMetadata(
-            'self:paramtypes',
-            testTarget,
-            testKey,
-          )?.[0];
-        })
-      );
-    };
 
     describe('IsImpersonating', () => {
       it('should return true when request.isImpersonating is true', () => {
@@ -961,6 +975,341 @@ describe('auth.decorators', () => {
         });
 
         expect(ServiceCtx).toBeDefined();
+      });
+    });
+  });
+
+  describe('Parameter Decorators Execution', () => {
+    // Type for param decorator factories
+    type ParamDecoratorFactory = (...args: any[]) => ParameterDecorator;
+
+    // Helper to extract the factory function from a param decorator
+    function getParamDecoratorFactory(decorator: ParamDecoratorFactory) {
+      class TestClass {
+        testMethod(@decorator() _param: any) {}
+      }
+      const metadata = Reflect.getMetadata(
+        ROUTE_ARGS_METADATA,
+        TestClass,
+        'testMethod',
+      );
+      const key = Object.keys(metadata)[0];
+      return metadata[key].factory;
+    }
+
+    // Helper to extract factory with data parameter
+    function getParamDecoratorFactoryWithData(
+      decorator: ParamDecoratorFactory,
+      data: string,
+    ) {
+      class TestClass {
+        testMethod(@decorator(data) _param: any) {}
+      }
+      const metadata = Reflect.getMetadata(
+        ROUTE_ARGS_METADATA,
+        TestClass,
+        'testMethod',
+      );
+      const key = Object.keys(metadata)[0];
+      return metadata[key];
+    }
+
+    const mockUser = {
+      id: 'user-123',
+      email: 'test@example.com',
+      name: 'Test User',
+      role: 'admin',
+      emailVerified: true,
+    };
+
+    const mockSessionData = {
+      id: 'session-456',
+      userId: 'user-123',
+      createdAt: '2025-01-01T00:00:00Z',
+      expiresAt: '2025-01-08T00:00:00Z',
+    };
+
+    const mockOrganization = {
+      id: 'org-789',
+      name: 'Test Org',
+      slug: 'test-org',
+    };
+
+    const mockOrgMember = {
+      id: 'member-001',
+      organizationId: 'org-789',
+      userId: 'user-123',
+      role: 'owner',
+    };
+
+    const mockApiKey = {
+      id: 'apikey-111',
+      name: 'Test Key',
+      userId: 'user-123',
+      permissions: { files: ['read', 'write'] },
+    };
+
+    function createMockExecutionContext(requestData: any): ExecutionContext {
+      return {
+        switchToHttp: () => ({
+          getRequest: () => requestData,
+          getResponse: () => ({}),
+          getNext: () => () => {},
+        }),
+        getType: () => 'http',
+        getClass: () => class {},
+        getHandler: () => () => {},
+        getArgs: () => [requestData, {}, () => {}],
+        getArgByIndex: (index: number) => [requestData, {}, () => {}][index],
+        switchToRpc: () => ({
+          getData: () => ({}),
+          getContext: () => ({}),
+        }),
+        switchToWs: () => ({
+          getData: () => ({}),
+          getClient: () => ({}),
+        }),
+      } as ExecutionContext;
+    }
+
+    describe('@Session()', () => {
+      it('should return full session object', () => {
+        const factory = getParamDecoratorFactory(Session);
+        const mockRequest = {
+          session: { session: mockSessionData, user: mockUser },
+          user: mockUser,
+        };
+        const ctx = createMockExecutionContext(mockRequest);
+        const result = factory(undefined, ctx);
+        expect(result).toEqual({ session: mockSessionData, user: mockUser });
+      });
+
+      it('should return undefined when no session', () => {
+        const factory = getParamDecoratorFactory(Session);
+        const mockRequest = {};
+        const ctx = createMockExecutionContext(mockRequest);
+        const result = factory(undefined, ctx);
+        expect(result).toBeUndefined();
+      });
+    });
+
+    describe('@SessionProperty()', () => {
+      it('should return specific session property', () => {
+        const metadata = getParamDecoratorFactoryWithData(
+          SessionProperty,
+          'id',
+        );
+        const mockRequest = {
+          session: { session: mockSessionData, user: mockUser },
+        };
+        const ctx = createMockExecutionContext(mockRequest);
+        const result = metadata.factory('id', ctx);
+        expect(result).toBe('session-456');
+      });
+
+      it('should return undefined for missing property', () => {
+        const metadata = getParamDecoratorFactoryWithData(
+          SessionProperty,
+          'nonexistent',
+        );
+        const mockRequest = {
+          session: { session: mockSessionData, user: mockUser },
+        };
+        const ctx = createMockExecutionContext(mockRequest);
+        const result = metadata.factory('nonexistent', ctx);
+        expect(result).toBeUndefined();
+      });
+    });
+
+    describe('@CurrentUser()', () => {
+      it('should return user object', () => {
+        const factory = getParamDecoratorFactory(CurrentUser);
+        const mockRequest = { user: mockUser };
+        const ctx = createMockExecutionContext(mockRequest);
+        const result = factory(undefined, ctx);
+        expect(result).toEqual(mockUser);
+      });
+
+      it('should return undefined when no user', () => {
+        const factory = getParamDecoratorFactory(CurrentUser);
+        const mockRequest = {};
+        const ctx = createMockExecutionContext(mockRequest);
+        const result = factory(undefined, ctx);
+        expect(result).toBeUndefined();
+      });
+    });
+
+    describe('@UserProperty()', () => {
+      it('should return specific user property', () => {
+        const metadata = getParamDecoratorFactoryWithData(
+          UserProperty,
+          'email',
+        );
+        const mockRequest = { user: mockUser };
+        const ctx = createMockExecutionContext(mockRequest);
+        const result = metadata.factory('email', ctx);
+        expect(result).toBe('test@example.com');
+      });
+
+      it('should return role property', () => {
+        const metadata = getParamDecoratorFactoryWithData(UserProperty, 'role');
+        const mockRequest = { user: mockUser };
+        const ctx = createMockExecutionContext(mockRequest);
+        const result = metadata.factory('role', ctx);
+        expect(result).toBe('admin');
+      });
+    });
+
+    describe('@CurrentOrg()', () => {
+      it('should return organization object', () => {
+        const factory = getParamDecoratorFactory(CurrentOrg);
+        const mockRequest = { organization: mockOrganization };
+        const ctx = createMockExecutionContext(mockRequest);
+        const result = factory(undefined, ctx);
+        expect(result).toEqual(mockOrganization);
+      });
+
+      it('should return undefined when no organization', () => {
+        const factory = getParamDecoratorFactory(CurrentOrg);
+        const mockRequest = {};
+        const ctx = createMockExecutionContext(mockRequest);
+        const result = factory(undefined, ctx);
+        expect(result).toBeUndefined();
+      });
+    });
+
+    describe('@OrgMember()', () => {
+      it('should return organization member object', () => {
+        const factory = getParamDecoratorFactory(OrgMember);
+        const mockRequest = { organizationMember: mockOrgMember };
+        const ctx = createMockExecutionContext(mockRequest);
+        const result = factory(undefined, ctx);
+        expect(result).toEqual(mockOrgMember);
+      });
+
+      it('should return undefined when no org member', () => {
+        const factory = getParamDecoratorFactory(OrgMember);
+        const mockRequest = {};
+        const ctx = createMockExecutionContext(mockRequest);
+        const result = factory(undefined, ctx);
+        expect(result).toBeUndefined();
+      });
+    });
+
+    describe('@IsImpersonating()', () => {
+      it('should return true when impersonating', () => {
+        const factory = getParamDecoratorFactory(IsImpersonating);
+        const mockRequest = { isImpersonating: true };
+        const ctx = createMockExecutionContext(mockRequest);
+        const result = factory(undefined, ctx);
+        expect(result).toBe(true);
+      });
+
+      it('should return false when not impersonating', () => {
+        const factory = getParamDecoratorFactory(IsImpersonating);
+        const mockRequest = { isImpersonating: false };
+        const ctx = createMockExecutionContext(mockRequest);
+        const result = factory(undefined, ctx);
+        expect(result).toBe(false);
+      });
+
+      it('should return false when property is undefined', () => {
+        const factory = getParamDecoratorFactory(IsImpersonating);
+        const mockRequest = {};
+        const ctx = createMockExecutionContext(mockRequest);
+        const result = factory(undefined, ctx);
+        expect(result).toBe(false);
+      });
+    });
+
+    describe('@ImpersonatedBy()', () => {
+      it('should return impersonator ID', () => {
+        const factory = getParamDecoratorFactory(ImpersonatedBy);
+        const mockRequest = { impersonatedBy: 'admin-user-id' };
+        const ctx = createMockExecutionContext(mockRequest);
+        const result = factory(undefined, ctx);
+        expect(result).toBe('admin-user-id');
+      });
+
+      it('should return null when not impersonated', () => {
+        const factory = getParamDecoratorFactory(ImpersonatedBy);
+        const mockRequest = {};
+        const ctx = createMockExecutionContext(mockRequest);
+        const result = factory(undefined, ctx);
+        expect(result).toBeNull();
+      });
+    });
+
+    describe('@ApiKey()', () => {
+      it('should return API key object', () => {
+        const factory = getParamDecoratorFactory(ApiKey);
+        const mockRequest = { apiKey: mockApiKey };
+        const ctx = createMockExecutionContext(mockRequest);
+        const result = factory(undefined, ctx);
+        expect(result).toEqual(mockApiKey);
+      });
+
+      it('should return undefined when no API key', () => {
+        const factory = getParamDecoratorFactory(ApiKey);
+        const mockRequest = {};
+        const ctx = createMockExecutionContext(mockRequest);
+        const result = factory(undefined, ctx);
+        expect(result).toBeUndefined();
+      });
+    });
+
+    describe('createAuthParamDecorator execution', () => {
+      it('should execute mapper with full auth context', () => {
+        const CustomDecorator = createAuthParamDecorator(
+          (auth: AuthContext) => ({
+            userId: auth.user?.id ?? 'none',
+            orgId: auth.organization?.id ?? 'none',
+            isAdmin: (auth.user as any)?.role === 'admin',
+          }),
+        );
+
+        const factory = getParamDecoratorFactory(CustomDecorator);
+        const mockRequest = {
+          session: { session: mockSessionData, user: mockUser },
+          user: mockUser,
+          organization: mockOrganization,
+          organizationMember: mockOrgMember,
+          isImpersonating: false,
+          impersonatedBy: null,
+          apiKey: null,
+        };
+        const ctx = createMockExecutionContext(mockRequest);
+        const result = factory(undefined, ctx);
+
+        expect(result).toEqual({
+          userId: 'user-123',
+          orgId: 'org-789',
+          isAdmin: true,
+        });
+      });
+
+      it('should handle missing optional fields with defaults', () => {
+        const SafeDecorator = createAuthParamDecorator((auth: AuthContext) => ({
+          hasSession: auth.session !== null && auth.session !== undefined,
+          hasOrg: auth.organization !== null,
+          isImpersonating: auth.isImpersonating,
+          hasApiKey: auth.apiKey !== null,
+        }));
+
+        const factory = getParamDecoratorFactory(SafeDecorator);
+        const mockRequest = {
+          session: null,
+          user: null,
+        };
+        const ctx = createMockExecutionContext(mockRequest);
+        const result = factory(undefined, ctx);
+
+        expect(result).toEqual({
+          hasSession: false,
+          hasOrg: false,
+          isImpersonating: false,
+          hasApiKey: false,
+        });
       });
     });
   });

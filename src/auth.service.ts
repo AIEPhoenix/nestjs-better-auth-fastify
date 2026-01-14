@@ -88,10 +88,8 @@ interface AuthWithApi {
  *   const session = await this.authService.getSessionFromRequest(request);
  *   // session type is automatically inferred from auth.$Infer.Session
  *
- *   // Or access the API directly
- *   const accounts = await this.authService.api.listUserAccounts({
- *     headers: getWebHeadersFromRequest(request),
- *   });
+ *   // Or access Better Auth API directly for advanced operations
+ *   const sessions = await this.authService.listUserSessions(request);
  * }
  *
  * // Type inference example (inspired by Hono integration)
@@ -159,11 +157,11 @@ export class AuthService<T extends { api: T['api'] } = AuthWithApi> {
     return this.options.auth;
   }
 
+  /**
+   * Get auth routes base path from Better Auth options
+   */
   get basePath(): string {
-    const authBasePath = this.auth.options?.basePath;
-    return normalizeBasePath(
-      this.options.basePath ?? authBasePath ?? '/api/auth',
-    );
+    return normalizeBasePath(this.auth.options?.basePath ?? '/api/auth');
   }
 
   /**

@@ -20,19 +20,17 @@ import {
 describe('OrganizationController (e2e) - Real better-auth', () => {
   let app: NestFastifyApplication;
   let userCookies: string[];
-  let userId: string;
 
   beforeAll(async () => {
     app = await createTestApp();
 
     // Create test user
-    const { cookies, user } = await createTestUser(app, {
+    const { cookies } = await createTestUser(app, {
       email: generateTestEmail('org-user'),
       password: 'Test123!',
       name: 'Organization Test User',
     });
     userCookies = cookies;
-    userId = user.id;
   });
 
   afterAll(async () => {

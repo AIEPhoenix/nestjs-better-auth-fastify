@@ -9,7 +9,7 @@
 <h1 align="center">nestjs-better-auth-fastify</h1>
 
 <p align="center">
-  A comprehensive <a href="https://www.better-auth.com">Better Auth</a> integration for <a href="https://nestjs.com">NestJS</a> with <a href="https://fastify.dev">Fastify</a> adapter.
+  为 <a href="https://nestjs.com">NestJS</a> + <a href="https://fastify.dev">Fastify</a> 提供的 <a href="https://www.better-auth.com">Better Auth</a> 集成库
 </p>
 
 <p align="center">
@@ -19,45 +19,45 @@
 </p>
 
 <p align="center">
-  English | <a href="./README.zh-CN.md">中文</a>
+  <a href="./README.md">English</a> | 中文
 </p>
 
-## Table of Contents
+## 目录
 
-- [Features](#-features)
-- [Installation](#-installation)
-- [Quick Start](#-quick-start)
-- [Decorators Reference](#-decorators-reference)
-  - [Access Control](#access-control-decorators)
-  - [Admin Plugin](#admin-plugin-decorators)
-  - [Alternative Auth Methods](#alternative-auth-methods)
-  - [Organization Plugin](#organization-plugin-decorators)
-  - [Parameter Decorators](#parameter-decorators)
-  - [Custom Auth Context Decorators](#custom-auth-context-decorators)
-- [Hook System](#-hook-system)
+- [特性](#-特性)
+- [安装](#-安装)
+- [快速开始](#-快速开始)
+- [装饰器参考](#-装饰器参考)
+  - [访问控制](#访问控制装饰器)
+  - [Admin 插件](#admin-插件装饰器)
+  - [替代认证方式](#替代认证方式)
+  - [Organization 插件](#organization-插件装饰器)
+  - [参数装饰器](#参数装饰器)
+  - [自定义认证上下文装饰器](#自定义认证上下文装饰器)
+- [Hook 系统](#-hook-系统)
 - [AuthService API](#-authservice-api)
-- [Type Inference](#-type-inference)
-- [Configuration](#%EF%B8%8F-configuration)
-- [Multi-Context Support](#-multi-context-support)
-- [Utility Functions](#-utility-functions)
-- [Request Extension](#-request-extension)
-- [Testing](#-testing)
-- [Requirements](#-requirements)
-- [Contributing](#-contributing)
-- [License](#-license)
+- [类型推断](#-类型推断)
+- [配置选项](#%EF%B8%8F-配置选项)
+- [多上下文支持](#-多上下文支持)
+- [工具函数](#-工具函数)
+- [Request 扩展](#-request-扩展)
+- [测试](#-测试)
+- [环境要求](#-环境要求)
+- [贡献](#-贡献)
+- [许可证](#-许可证)
 
-## ✨ Features
+## ✨ 特性
 
-- 🔐 **Seamless Integration** - Drop-in Better Auth support for NestJS + Fastify
-- 🎯 **Decorator-based** - Intuitive decorators for authentication & authorization
-- 📦 **Plugin Support** - Full support for Better Auth plugins (Admin, Organization, API Key, Bearer, etc.)
-- 🔄 **Multi-Context** - Works with HTTP, GraphQL, and WebSocket
-- 🪝 **Hook System** - NestJS-native hooks for auth lifecycle events
-- 🎨 **Type-Safe** - Full TypeScript support with type inference from your auth config
-- ⚡ **Performance** - Optimized with lazy loading for optional dependencies
-- 🌍 **i18n Ready** - Customizable error messages for internationalization
+- 🔐 **无缝集成** - 为 NestJS + Fastify 提供开箱即用的 Better Auth 支持
+- 🎯 **装饰器驱动** - 直观的装饰器实现认证和授权
+- 📦 **插件支持** - 完整支持 Better Auth 插件（Admin、Organization、API Key、Bearer 等）
+- 🔄 **多上下文** - 支持 HTTP、GraphQL 和 WebSocket
+- 🪝 **Hook 系统** - NestJS 原生的认证生命周期钩子
+- 🎨 **类型安全** - 完整的 TypeScript 支持，从认证配置自动推断类型
+- ⚡ **高性能** - 可选依赖懒加载优化
+- 🌍 **国际化就绪** - 可自定义错误消息
 
-## 📦 Installation
+## 📦 安装
 
 ```bash
 # npm
@@ -70,21 +70,21 @@ pnpm add @sapix/nestjs-better-auth-fastify better-auth
 yarn add @sapix/nestjs-better-auth-fastify better-auth
 ```
 
-### Optional Dependencies
+### 可选依赖
 
-Install these based on your needs:
+根据需要安装：
 
 ```bash
-# For GraphQL support
+# GraphQL 支持
 pnpm add @nestjs/graphql graphql
 
-# For WebSocket support
+# WebSocket 支持
 pnpm add @nestjs/websockets @nestjs/platform-socket.io
 ```
 
-## 🚀 Quick Start
+## 🚀 快速开始
 
-### 1. Create Better Auth Configuration
+### 1. 创建 Better Auth 配置
 
 ```typescript
 // src/auth/auth.config.ts
@@ -96,14 +96,14 @@ export const auth = betterAuth({
   basePath: '/api/auth',
   database: drizzleAdapter(db, { provider: 'postgresql' }),
   emailAndPassword: { enabled: true },
-  // Add more plugins as needed
+  // 按需添加更多插件
 });
 
-// Export type for type inference
+// 导出类型用于类型推断
 export type Auth = typeof auth;
 ```
 
-### 2. Import AuthModule
+### 2. 导入 AuthModule
 
 ```typescript
 // src/app.module.ts
@@ -119,7 +119,7 @@ import { auth } from './auth/auth.config';
 export class AppModule {}
 ```
 
-### 3. Use Decorators in Controllers
+### 3. 在控制器中使用装饰器
 
 ```typescript
 // src/user/user.controller.ts
@@ -134,80 +134,80 @@ import {
 
 @Controller('user')
 export class UserController {
-  // All routes are protected by default
+  // 默认所有路由都需要认证
   @Get('profile')
   getProfile(@Session() session: UserSession) {
     return session;
   }
 
-  // Public route - no authentication required
+  // 公开路由 - 无需认证
   @Get('public')
   @AllowAnonymous()
   getPublicData() {
-    return { message: 'This is public' };
+    return { message: '这是公开内容' };
   }
 
-  // Role-based access control
+  // 基于角色的访问控制
   @Get('admin')
   @Roles(['admin'])
   getAdminData(@CurrentUser() user: UserSession['user']) {
-    return { message: `Hello admin ${user.name}` };
+    return { message: `你好，管理员 ${user.name}` };
   }
 }
 ```
 
-## 📚 Decorators Reference
+## 📚 装饰器参考
 
-### Access Control Decorators
+### 访问控制装饰器
 
-| Decorator                | Description                                            | Example                 |
-| ------------------------ | ------------------------------------------------------ | ----------------------- |
-| `@AllowAnonymous()`      | Mark route as public (overrides defaultAuthBehavior)   | Public endpoints        |
-| `@RequireAuth()`         | Require authentication (overrides defaultAuthBehavior) | Protected endpoints     |
-| `@OptionalAuth()`        | Auth optional, session injected if present             | Mixed-access endpoints  |
-| `@Roles(['admin'])`      | Require specific roles                                 | Admin-only routes       |
-| `@Permissions(['read'])` | Require specific permissions                           | Permission-based access |
-| `@RequireFreshSession()` | Require recently authenticated session                 | Sensitive operations    |
+| 装饰器                   | 描述                                       | 示例             |
+| ------------------------ | ------------------------------------------ | ---------------- |
+| `@AllowAnonymous()`      | 标记为公开路由（覆盖 defaultAuthBehavior） | 公开端点         |
+| `@RequireAuth()`         | 要求认证（覆盖 defaultAuthBehavior）       | 受保护端点       |
+| `@OptionalAuth()`        | 可选认证，有 session 时注入                | 混合访问端点     |
+| `@Roles(['admin'])`      | 要求特定角色                               | 管理员专用路由   |
+| `@Permissions(['read'])` | 要求特定权限                               | 基于权限的访问   |
+| `@RequireFreshSession()` | 要求最近认证的 session                     | 敏感操作         |
 
-#### Roles & Permissions Examples
+#### 角色和权限示例
 
 ```typescript
-// OR logic (default): user needs ANY of the roles
+// OR 逻辑（默认）：用户拥有任一角色即可
 @Roles(['admin', 'moderator'])
 
-// AND logic: user needs ALL roles
+// AND 逻辑：用户必须拥有所有角色
 @Roles(['admin', 'verified'], { mode: 'all' })
 
-// Custom error message
-@Roles(['admin'], { message: 'Administrator access required' })
+// 自定义错误消息
+@Roles(['admin'], { message: '需要管理员权限' })
 
-// Permission-based (same options available)
+// 基于权限（支持相同选项）
 @Permissions(['user:read', 'user:write'], { mode: 'any' })
 @Permissions(['read:posts', 'write:posts', 'delete:posts'], { mode: 'all' })
 ```
 
-#### Fresh Session Examples
+#### Session 新鲜度示例
 
 ```typescript
-// Use default freshAge (from auth config, defaults to 1 day)
+// 使用默认 freshAge（来自 auth 配置，默认 1 天）
 @RequireFreshSession()
 @Post('change-password')
 changePassword() {}
 
-// Custom freshAge (5 minutes = 300 seconds)
+// 自定义 freshAge（5 分钟 = 300 秒）
 @RequireFreshSession({ maxAge: 300 })
 @Post('enable-2fa')
 enable2FA() {}
 
-// Custom error message
-@RequireFreshSession({ message: 'Please re-authenticate to continue' })
+// 自定义错误消息
+@RequireFreshSession({ message: '请重新登录以继续' })
 @Delete('account')
 deleteAccount() {}
 ```
 
-### Admin Plugin Decorators
+### Admin 插件装饰器
 
-> Requires `admin()` plugin from `better-auth/plugins`
+> 需要 `better-auth/plugins` 中的 `admin()` 插件
 
 ```typescript
 import { admin } from 'better-auth/plugins';
@@ -217,44 +217,44 @@ export const auth = betterAuth({
 });
 ```
 
-| Decorator                  | Description                                                       |
-| -------------------------- | ----------------------------------------------------------------- |
-| `@AdminOnly()`             | Admin role required                                               |
-| `@BanCheck()`              | Real-time ban check (Better Auth only checks at session creation) |
-| `@DisallowImpersonation()` | Block impersonated sessions                                       |
-| `@SecureAdminOnly()`       | Combined: Admin + Fresh + No Impersonation                        |
+| 装饰器                     | 描述                                      |
+| -------------------------- | ----------------------------------------- |
+| `@AdminOnly()`             | 要求管理员角色                            |
+| `@BanCheck()`              | 实时封禁检查（Better Auth 仅在创建时检查）|
+| `@DisallowImpersonation()` | 阻止模拟 session                          |
+| `@SecureAdminOnly()`       | 组合：Admin + Fresh + 禁止模拟            |
 
 ```typescript
-// High-security admin operation
+// 高安全性管理员操作
 @SecureAdminOnly()
 @Delete('admin/users/:id')
 deleteUser() {
-  // Only real admins with fresh sessions can execute
+  // 只有真正的管理员且 session 新鲜才能执行
 }
 
-// Real-time ban check - useful for users banned after session creation
+// 实时封禁检查 - 适用于 session 创建后被封禁的用户
 @BanCheck()
 @Post('comments')
 createComment() {}
 
-// Prevent impersonated sessions from sensitive operations
+// 阻止模拟 session 执行敏感操作
 @DisallowImpersonation()
 @Post('transfer-funds')
 transferFunds() {}
 
-// Custom error message
-@AdminOnly('Administrator privileges required')
+// 自定义错误消息
+@AdminOnly('需要管理员权限')
 @Get('admin/dashboard')
 getDashboard() {}
 ```
 
-### Alternative Auth Methods
+### 替代认证方式
 
-#### Bearer Token Authentication
+#### Bearer Token 认证
 
-> Requires `bearer()` plugin from `better-auth/plugins`
+> 需要 `better-auth/plugins` 中的 `bearer()` 插件
 
-Bearer Token authentication is **automatically supported** when you add the `bearer()` plugin to Better Auth. No special decorator is needed - the default session auth will accept Bearer Token in the `Authorization` header.
+当添加 `bearer()` 插件后，Bearer Token 认证**自动支持**。无需特殊装饰器 - 默认的 session 认证会接受 `Authorization` 头中的 Bearer Token。
 
 ```typescript
 import { bearer } from 'better-auth/plugins';
@@ -264,15 +264,15 @@ export const auth = betterAuth({
 });
 ```
 
-Client usage:
+客户端使用：
 
 ```bash
 curl -H "Authorization: Bearer <session-token>" /api/mobile/data
 ```
 
-#### API Key Authentication
+#### API Key 认证
 
-> Requires `apiKey()` plugin from `better-auth/plugins`
+> 需要 `better-auth/plugins` 中的 `apiKey()` 插件
 
 ```typescript
 import { apiKey } from 'better-auth/plugins';
@@ -283,40 +283,40 @@ export const auth = betterAuth({
 ```
 
 ```typescript
-// API Key only
+// 仅 API Key
 @ApiKeyAuth()
 @Get('api/external')
 externalApi(@ApiKey() apiKey: ApiKeyValidation['key']) {
   return { keyId: apiKey.id, permissions: apiKey.permissions };
 }
 
-// API Key or Session (flexible mode)
+// API Key 或 Session（灵活模式）
 @ApiKeyAuth({ allowSession: true })
 @Get('api/flexible')
 flexibleApi() {}
 
-// With permission requirements
+// 带权限要求
 @ApiKeyAuth({
   permissions: {
     permissions: { files: ['read', 'write'] },
-    message: 'Requires files read/write permissions',
+    message: '需要文件读写权限',
   },
 })
 @Post('api/files')
 uploadFile() {}
 ```
 
-Client usage:
+客户端使用：
 
 ```bash
 curl -H "x-api-key: <api-key>" /api/external
 ```
 
-> **Note**: API keys must be sent via dedicated headers (default: `x-api-key`). Custom headers can be configured via Better Auth's `apiKey` plugin `apiKeyHeaders` option. Do NOT use `Authorization: Bearer` for API keys - that's reserved for session tokens.
+> **注意**：API key 必须通过专用头发送（默认：`x-api-key`）。自定义头可通过 Better Auth 的 `apiKey` 插件的 `apiKeyHeaders` 选项配置。请勿使用 `Authorization: Bearer` 发送 API key - 那是为 session token 保留的。
 
-### Organization Plugin Decorators
+### Organization 插件装饰器
 
-> Requires `organization()` plugin from `better-auth/plugins`
+> 需要 `better-auth/plugins` 中的 `organization()` 插件
 
 ```typescript
 import { organization } from 'better-auth/plugins';
@@ -334,70 +334,70 @@ export const auth = betterAuth({
 });
 ```
 
-| Decorator               | Description                          |
-| ----------------------- | ------------------------------------ |
-| `@OrgRequired()`        | Require organization context         |
-| `@OptionalOrg()`        | Load org if available (not required) |
-| `@OrgRoles(['owner'])`  | Require organization roles           |
-| `@OrgPermission({...})` | Require organization permissions     |
+| 装饰器                  | 描述                           |
+| ----------------------- | ------------------------------ |
+| `@OrgRequired()`        | 要求组织上下文                 |
+| `@OptionalOrg()`        | 加载组织（如可用，非必需）     |
+| `@OrgRoles(['owner'])`  | 要求组织角色                   |
+| `@OrgPermission({...})` | 要求组织权限                   |
 
 ```typescript
-// Require organization context
+// 要求组织上下文
 @OrgRequired()
 @Get('org/dashboard')
 getOrgDashboard(@CurrentOrg() org: Organization) {
   return { name: org.name };
 }
 
-// Require owner or admin role
+// 要求 owner 或 admin 角色
 @OrgRoles(['owner', 'admin'])
 @Put('org/settings')
 updateOrgSettings() {}
 
-// Multiple roles with AND logic
+// 多角色 AND 逻辑
 @OrgRoles(['admin', 'billing'], { mode: 'all' })
 @Post('org/billing')
 manageBilling() {}
 
-// Fine-grained permission check
+// 细粒度权限检查
 @OrgPermission({ resource: 'member', action: 'create' })
 @Post('org/members')
 inviteMember() {}
 
-// Multiple actions with AND logic
+// 多操作 AND 逻辑
 @OrgPermission({ resource: 'member', action: ['read', 'update'], mode: 'all' })
 @Put('org/members/:id')
 updateMember() {}
 
-// Custom error message
+// 自定义错误消息
 @OrgPermission({
   resource: 'invite',
   action: 'create',
-  message: 'You do not have permission to invite members',
+  message: '你没有邀请成员的权限',
 })
 @Post('org/invitations')
 createInvitation() {}
 ```
 
-Client usage (must include organization ID):
+客户端使用（必须包含组织 ID）：
 
 ```bash
 curl -H "x-organization-id: <org-id>" /org/dashboard
 ```
 
-### Parameter Decorators
+### 参数装饰器
 
-| Decorator                | Description               | Type                      |
-| ------------------------ | ------------------------- | ------------------------- |
-| `@Session()`             | Full session object       | `UserSession`             |
-| `@SessionProperty('id')` | Specific session property | `string`                  |
-| `@CurrentUser()`         | Current user              | `UserSession['user']`     |
-| `@UserProperty('id')`    | Specific user property    | `string`                  |
-| `@ApiKey()`              | API Key info              | `ApiKeyValidation['key']` |
-| `@CurrentOrg()`          | Current organization      | `Organization`            |
-| `@OrgMember()`           | Organization membership   | `OrganizationMember`      |
-| `@IsImpersonating()`     | Impersonation status      | `boolean`                 |
-| `@ImpersonatedBy()`      | Impersonator admin ID     | `string \| null`          |
+| 装饰器                   | 描述               | 类型                      |
+| ------------------------ | ------------------ | ------------------------- |
+| `@Session()`             | 完整 session 对象  | `UserSession`             |
+| `@SessionProperty('id')` | 特定 session 属性  | `string`                  |
+| `@CurrentUser()`         | 当前用户           | `UserSession['user']`     |
+| `@UserProperty('id')`    | 特定用户属性       | `string`                  |
+| `@ApiKey()`              | API Key 信息       | `ApiKeyValidation['key']` |
+| `@CurrentOrg()`          | 当前组织           | `Organization`            |
+| `@OrgMember()`           | 组织成员身份       | `OrganizationMember`      |
+| `@IsImpersonating()`     | 模拟状态           | `boolean`                 |
+| `@ImpersonatedBy()`      | 模拟者管理员 ID    | `string \| null`          |
 
 ```typescript
 @Get('me')
@@ -421,11 +421,11 @@ getOrgContext(
 }
 ```
 
-### Custom Auth Context Decorators
+### 自定义认证上下文装饰器
 
-Create reusable parameter decorators with `createAuthParamDecorator` to reduce boilerplate and standardize auth context extraction across your application.
+使用 `createAuthParamDecorator` 创建可复用的参数装饰器，减少样板代码并标准化认证上下文提取。
 
-**Before** - repetitive parameter injection:
+**之前** - 重复的参数注入：
 
 ```typescript
 @Get(':id')
@@ -435,12 +435,12 @@ findOne(
   @OrgMember() member: OrganizationMember | null,
   @Param('id') id: string,
 ) {
-  const ctx = this.buildContext(session, org, member); // manual mapping every time
+  const ctx = this.buildContext(session, org, member); // 每次手动映射
   return this.resourceService.findOne(id, ctx);
 }
 ```
 
-**After** - clean and reusable:
+**之后** - 简洁可复用：
 
 ```typescript
 @Get(':id')
@@ -449,7 +449,7 @@ findOne(@RequestCtx() ctx: RequestContext, @Param('id') id: string) {
 }
 ```
 
-#### Basic Usage
+#### 基本用法
 
 ```typescript
 import {
@@ -457,7 +457,7 @@ import {
   AuthContext,
 } from '@sapix/nestjs-better-auth-fastify';
 
-// Define your context interface
+// 定义上下文接口
 interface RequestContext {
   userId: string;
   userEmail: string;
@@ -465,7 +465,7 @@ interface RequestContext {
   organizationId: string | null;
 }
 
-// Create a reusable decorator
+// 创建可复用装饰器
 const RequestCtx = createAuthParamDecorator<RequestContext>(
   (auth: AuthContext) => ({
     userId: auth.user?.id ?? 'anonymous',
@@ -475,7 +475,7 @@ const RequestCtx = createAuthParamDecorator<RequestContext>(
   }),
 );
 
-// Use in controllers - clean and consistent
+// 在控制器中使用 - 简洁一致
 @Controller('resources')
 export class ResourceController {
   @Get(':id')
@@ -490,9 +490,9 @@ export class ResourceController {
 }
 ```
 
-#### AuthContext Properties
+#### AuthContext 属性
 
-The `AuthContext` object provides access to all auth-related data:
+`AuthContext` 对象提供所有认证相关数据：
 
 ```typescript
 interface AuthContext {
@@ -506,37 +506,37 @@ interface AuthContext {
 }
 ```
 
-#### Data Availability by Decorator
+#### 装饰器数据可用性
 
-**Important:** Not all `AuthContext` properties are populated by default. Data availability depends on authentication method and decorators used:
+**重要**：并非所有 `AuthContext` 属性默认都会填充。数据可用性取决于认证方式和使用的装饰器：
 
-**Session Authentication** (default):
+**Session 认证**（默认）：
 
-| AuthContext Property | Availability          | Notes                                    |
-| -------------------- | --------------------- | ---------------------------------------- |
-| `session`            | ✅ Always             | Full session object                      |
-| `user`               | ✅ Always             | User from session                        |
-| `isImpersonating`    | ✅ Always             | From session data                        |
-| `impersonatedBy`     | ✅ Always             | Admin ID if impersonating                |
-| `organization`       | ⚠️ Requires decorator | Use `@OrgRequired()` or `@OptionalOrg()` |
-| `orgMember`          | ⚠️ Requires decorator | Use `@OrgRequired()` or `@OptionalOrg()` |
-| `apiKey`             | ❌ `null`             | Not applicable for session auth          |
+| AuthContext 属性     | 可用性              | 说明                                     |
+| -------------------- | ------------------- | ---------------------------------------- |
+| `session`            | ✅ 始终可用         | 完整 session 对象                        |
+| `user`               | ✅ 始终可用         | 来自 session 的用户                      |
+| `isImpersonating`    | ✅ 始终可用         | 来自 session 数据                        |
+| `impersonatedBy`     | ✅ 始终可用         | 模拟时的管理员 ID                        |
+| `organization`       | ⚠️ 需要装饰器       | 使用 `@OrgRequired()` 或 `@OptionalOrg()` |
+| `orgMember`          | ⚠️ 需要装饰器       | 使用 `@OrgRequired()` 或 `@OptionalOrg()` |
+| `apiKey`             | ❌ `null`           | 不适用于 session 认证                    |
 
-**API Key Authentication** (`@ApiKeyAuth()`):
+**API Key 认证**（`@ApiKeyAuth()`）：
 
-| AuthContext Property | Availability | Notes                        |
-| -------------------- | ------------ | ---------------------------- |
-| `session`            | ❌ `null`    | API Keys don't have sessions |
-| `user`               | ✅ Always    | Loaded via `key.userId`      |
-| `isImpersonating`    | ❌ `false`   | Not applicable for API Keys  |
-| `impersonatedBy`     | ❌ `null`    | Not applicable for API Keys  |
-| `organization`       | ❌ `null`    | Not loaded for API Key auth  |
-| `orgMember`          | ❌ `null`    | Not loaded for API Key auth  |
-| `apiKey`             | ✅ Always    | Full API Key info            |
+| AuthContext 属性     | 可用性              | 说明                                     |
+| -------------------- | ------------------- | ---------------------------------------- |
+| `session`            | ❌ `null`           | API Key 没有 session                     |
+| `user`               | ✅ 始终可用         | 通过 `key.userId` 加载                   |
+| `isImpersonating`    | ❌ `false`          | 不适用于 API Key                         |
+| `impersonatedBy`     | ❌ `null`           | 不适用于 API Key                         |
+| `organization`       | ❌ `null`           | API Key 认证不加载                       |
+| `orgMember`          | ❌ `null`           | API Key 认证不加载                       |
+| `apiKey`             | ✅ 始终可用         | 完整 API Key 信息                        |
 
-#### Creating Paired Decorators
+#### 创建配套装饰器
 
-When creating a custom param decorator that uses organization data, create a **paired** method decorator to ensure proper data loading. The naming convention `XxxCtx` + `XxxAccess` makes the pairing clear.
+当创建使用组织数据的自定义参数装饰器时，需要创建**配套**的方法装饰器来确保数据正确加载。命名约定 `XxxCtx` + `XxxAccess` 使配套关系一目了然。
 
 ```typescript
 import { applyDecorators } from '@nestjs/common';
@@ -549,7 +549,7 @@ import {
   AuthContext,
 } from '@sapix/nestjs-better-auth-fastify';
 
-// 1. Define your context interface
+// 1. 定义上下文接口
 interface ResourceContext {
   userId: string;
   organizationId: string | null;
@@ -557,7 +557,7 @@ interface ResourceContext {
   isOrgAdmin: boolean;
 }
 
-// 2. Create the param decorator: @ResourceCtx()
+// 2. 创建参数装饰器：@ResourceCtx()
 export const ResourceCtx = createAuthParamDecorator<ResourceContext>(
   (auth) => ({
     userId: auth.user?.id ?? '',
@@ -568,7 +568,7 @@ export const ResourceCtx = createAuthParamDecorator<ResourceContext>(
   }),
 );
 
-// 3. Create the paired method decorator: @ResourceAccess()
+// 3. 创建配套方法装饰器：@ResourceAccess()
 export interface ResourceAccessOptions {
   requireOrg?: boolean;
   orgRoles?: string[];
@@ -577,28 +577,28 @@ export interface ResourceAccessOptions {
 export function ResourceAccess(options: ResourceAccessOptions = {}) {
   const { requireOrg = false, orgRoles } = options;
 
-  // With org roles -> requires org + specific roles
+  // 指定组织角色 -> 需要组织 + 特定角色
   if (orgRoles?.length) {
     return applyDecorators(OrgRequired(), OrgRoles(orgRoles));
   }
 
-  // Requires org context
+  // 需要组织上下文
   if (requireOrg) {
     return OrgRequired();
   }
 
-  // Default: requires auth, loads org if available
-  // RequireAuth() ensures auth even when defaultAuthBehavior is 'public'
+  // 默认：需要认证，如可用则加载组织
+  // RequireAuth() 确保即使 defaultAuthBehavior 为 'public' 也需要认证
   return applyDecorators(RequireAuth(), OptionalOrg());
 }
 ```
 
-**Usage - always pair `@ResourceAccess()` with `@ResourceCtx()`:**
+**用法 - 始终将 `@ResourceAccess()` 与 `@ResourceCtx()` 配套使用：**
 
 ```typescript
 @Controller('resources')
 export class ResourceController {
-  // Default: requires auth, org loaded if available
+  // 默认：需要认证，如可用则加载组织
   @ResourceAccess()
   @Get('my')
   getMyResources(@ResourceCtx() ctx: ResourceContext) {
@@ -608,14 +608,14 @@ export class ResourceController {
     return this.service.getUserResources(ctx.userId);
   }
 
-  // Requires auth + org context
+  // 需要认证 + 组织上下文
   @ResourceAccess({ requireOrg: true })
   @Get('org')
   getOrgResources(@ResourceCtx() ctx: ResourceContext) {
     return this.service.getOrgResources(ctx.organizationId!);
   }
 
-  // Requires auth + org + admin role
+  // 需要认证 + 组织 + 管理员角色
   @ResourceAccess({ orgRoles: ['owner', 'admin'] })
   @Put('org/settings')
   updateOrgSettings(@ResourceCtx() ctx: ResourceContext) {
@@ -624,11 +624,11 @@ export class ResourceController {
 }
 ```
 
-> **Note**: The default `@ResourceAccess()` uses `RequireAuth()` to ensure authentication regardless of `defaultAuthBehavior` setting. This makes the decorator behavior predictable and independent of global configuration.
+> **注意**：默认的 `@ResourceAccess()` 使用 `RequireAuth()` 确保认证，不受 `defaultAuthBehavior` 设置影响。这使装饰器行为可预测且独立于全局配置。
 
-#### Real-World Examples
+#### 实际示例
 
-**Multi-Tenant Context:**
+**多租户上下文：**
 
 ```typescript
 interface TenantContext {
@@ -647,7 +647,7 @@ const TenantCtx = createAuthParamDecorator<TenantContext>((auth) => ({
 }));
 ```
 
-**Audit Context:**
+**审计上下文：**
 
 ```typescript
 interface AuditContext {
@@ -665,7 +665,7 @@ const AuditCtx = createAuthParamDecorator<AuditContext>((auth) => ({
 }));
 ```
 
-**Service Layer Context:**
+**服务层上下文：**
 
 ```typescript
 interface ServiceContext {
@@ -691,7 +691,7 @@ const ServiceCtx = createAuthParamDecorator<ServiceContext>((auth) => {
 });
 ```
 
-#### Combining Multiple Decorators
+#### 组合多个装饰器
 
 ```typescript
 @Get('dashboard')
@@ -704,11 +704,11 @@ getDashboard(
 }
 ```
 
-## 🪝 Hook System
+## 🪝 Hook 系统
 
-The hook system allows you to execute custom logic before and after Better Auth processes authentication requests.
+Hook 系统允许你在 Better Auth 处理认证请求前后执行自定义逻辑。
 
-### Creating a Hook Provider
+### 创建 Hook Provider
 
 ```typescript
 // src/hooks/sign-up.hook.ts
@@ -728,16 +728,16 @@ export class SignUpHook {
     private readonly crmService: CrmService,
   ) {}
 
-  // Validate before sign-up
+  // 注册前验证
   @BeforeHook('/sign-up/email')
   async validateBeforeSignUp(ctx: AuthHookContext) {
     const { email } = ctx.body as { email: string };
     if (email.endsWith('@blocked-domain.com')) {
-      throw new Error('This email domain is not allowed');
+      throw new Error('此邮箱域名不被允许');
     }
   }
 
-  // Send welcome email after sign-up
+  // 注册后发送欢迎邮件
   @AfterHook('/sign-up/email')
   async sendWelcomeEmail(ctx: AuthHookContext) {
     const user = ctx.context?.user;
@@ -747,41 +747,41 @@ export class SignUpHook {
     }
   }
 
-  // Log all auth requests (no path = matches all routes)
+  // 记录所有认证请求（无路径 = 匹配所有路由）
   @BeforeHook()
   async logAuthRequest(ctx: AuthHookContext) {
-    console.log('Auth request:', ctx.path);
+    console.log('认证请求:', ctx.path);
   }
 }
 ```
 
-### Registering Hook Providers
+### 注册 Hook Provider
 
 ```typescript
 // src/app.module.ts
 @Module({
   imports: [AuthModule.forRoot({ auth })],
-  providers: [SignUpHook], // Register hook provider
+  providers: [SignUpHook], // 注册 hook provider
 })
 export class AppModule {}
 ```
 
-### Common Hook Paths
+### 常用 Hook 路径
 
-| Path               | Description        |
-| ------------------ | ------------------ |
-| `/sign-up/email`   | Email sign-up      |
-| `/sign-in/email`   | Email sign-in      |
-| `/sign-out`        | Sign out           |
-| `/forget-password` | Forgot password    |
-| `/reset-password`  | Reset password     |
-| `/verify-email`    | Email verification |
+| 路径               | 描述         |
+| ------------------ | ------------ |
+| `/sign-up/email`   | 邮箱注册     |
+| `/sign-in/email`   | 邮箱登录     |
+| `/sign-out`        | 登出         |
+| `/forget-password` | 忘记密码     |
+| `/reset-password`  | 重置密码     |
+| `/verify-email`    | 邮箱验证     |
 
 ## 🛠 AuthService API
 
-`AuthService` provides programmatic access to Better Auth functionality.
+`AuthService` 提供对 Better Auth 功能的程序化访问。
 
-### Basic Usage
+### 基本用法
 
 ```typescript
 import { Injectable } from '@nestjs/common';
@@ -793,18 +793,18 @@ export class MyService {
   constructor(private readonly authService: AuthService<Auth>) {}
 
   async someMethod(request: FastifyRequest) {
-    // Get session from request
+    // 从请求获取 session
     const session = await this.authService.getSessionFromRequest(request);
 
-    // Validate session (throws UnauthorizedException if invalid)
+    // 验证 session（无效时抛出 UnauthorizedException）
     const validSession = await this.authService.validateSession(request);
 
-    // Check roles
+    // 检查角色
     if (this.authService.hasRole(session, ['admin'])) {
-      // User is admin
+      // 用户是管理员
     }
 
-    // Check permissions
+    // 检查权限
     if (
       this.authService.hasPermission(
         session,
@@ -812,15 +812,15 @@ export class MyService {
         'all',
       )
     ) {
-      // User has all required permissions
+      // 用户拥有所有必需权限
     }
 
-    // Check session freshness
+    // 检查 session 新鲜度
     if (!this.authService.isSessionFresh(session)) {
-      // Require re-authentication
+      // 要求重新认证
     }
 
-    // Access Better Auth API directly
+    // 直接访问 Better Auth API
     const accounts = await this.authService.api.listUserAccounts({
       headers: getWebHeadersFromRequest(request),
     });
@@ -828,86 +828,86 @@ export class MyService {
 }
 ```
 
-### Session Management
+### Session 管理
 
 ```typescript
-// Revoke a specific session
+// 撤销特定 session
 await this.authService.revokeSession(sessionToken, request);
 
-// Revoke all user sessions
+// 撤销所有用户 session
 await this.authService.revokeAllSessions(request);
 
-// List all user sessions
+// 列出所有用户 session
 const sessions = await this.authService.listUserSessions(request);
 ```
 
-### Admin Features
+### Admin 功能
 
 ```typescript
-// Check if user is banned
+// 检查用户是否被封禁
 if (this.authService.isUserBanned(session.user)) {
-  throw new ForbiddenException('User is banned');
+  throw new ForbiddenException('用户已被封禁');
 }
 
-// Check impersonation status
+// 检查模拟状态
 if (this.authService.isImpersonating(session)) {
   const adminId = this.authService.getImpersonatedBy(session);
-  // Log for audit
+  // 记录审计日志
 }
 ```
 
-### API Key Verification
+### API Key 验证
 
 ```typescript
 const result = await this.authService.verifyApiKey(apiKey);
 if (result.valid) {
-  console.log('Key belongs to user:', result.key?.userId);
-  console.log('Permissions:', result.key?.permissions);
+  console.log('Key 属于用户:', result.key?.userId);
+  console.log('权限:', result.key?.permissions);
 }
 
-// With permission requirements
+// 带权限要求
 const result = await this.authService.verifyApiKey(apiKey, {
   files: ['read', 'write'],
 });
 ```
 
-### Organization Features
+### Organization 功能
 
 ```typescript
-// Get active organization
+// 获取活动组织
 const org = await this.authService.getActiveOrganization(request);
 
-// Check organization permission
+// 检查组织权限
 const hasPermission = await this.authService.hasOrgPermission(request, {
   resource: 'member',
   action: 'create',
 });
 ```
 
-### JWT Token (Requires JWT Plugin)
+### JWT Token（需要 JWT 插件）
 
 ```typescript
 const jwt = await this.authService.getJwtToken(request);
 if (jwt) {
-  // Use JWT for service-to-service communication
+  // 使用 JWT 进行服务间通信
 }
 ```
 
-### Accessing the Auth Instance
+### 访问 Auth 实例
 
 ```typescript
-// Get the complete Better Auth instance
+// 获取完整的 Better Auth 实例
 const authInstance = this.authService.instance;
 
-// Get the configured basePath
+// 获取配置的 basePath
 const basePath = this.authService.basePath;
 ```
 
-## 🎨 Type Inference
+## 🎨 类型推断
 
-The library supports full type inference from your Better Auth configuration.
+该库支持从 Better Auth 配置完全推断类型。
 
-### Using $Infer Pattern
+### 使用 $Infer 模式
 
 ```typescript
 import { AuthService } from '@sapix/nestjs-better-auth-fastify';
@@ -918,18 +918,18 @@ export class MyService {
   constructor(private readonly authService: AuthService<Auth>) {}
 
   async getUser(request: FastifyRequest) {
-    // Session type is automatically inferred from your auth config
+    // Session 类型自动从你的 auth 配置推断
     const session = await this.authService.getSessionFromRequest(request);
-    // session.user includes all fields from your auth config
+    // session.user 包含你 auth 配置中的所有字段
   }
 }
 
-// Get types directly (compile-time only)
+// 直接获取类型（仅编译时）
 type Session = typeof authService.$Infer.Session;
 type User = typeof authService.$Infer.User;
 ```
 
-### Using InferSession and InferUser
+### 使用 InferSession 和 InferUser
 
 ```typescript
 import { InferSession, InferUser } from '@sapix/nestjs-better-auth-fastify';
@@ -939,7 +939,7 @@ type MySession = InferSession<Auth>;
 type MyUser = InferUser<Auth>;
 ```
 
-### Custom User Types
+### 自定义用户类型
 
 ```typescript
 interface CustomUser extends BaseUser {
@@ -950,50 +950,50 @@ interface CustomUser extends BaseUser {
 
 @Get('profile')
 getProfile(@Session() session: UserSession<CustomUser>) {
-  return session.user.department; // Type-safe
+  return session.user.department; // 类型安全
 }
 ```
 
-## ⚙️ Configuration
+## ⚙️ 配置选项
 
-### Full Configuration Options
+### 完整配置选项
 
 ```typescript
 AuthModule.forRoot({
-  // Required: Better Auth instance
-  // Auth routes path is read from auth.options.basePath (defaults to '/api/auth')
+  // 必需：Better Auth 实例
+  // 认证路由路径从 auth.options.basePath 读取（默认 '/api/auth'）
   auth,
 
-  // Optional: Default authentication behavior
-  // - 'require' (default): All routes require auth. Use @AllowAnonymous() for public routes.
-  // - 'optional': All routes have optional auth. Session injected if present.
-  // - 'public': All routes are public. Use @RequireAuth() for protected routes.
+  // 可选：默认认证行为
+  // - 'require'（默认）：所有路由需要认证。使用 @AllowAnonymous() 设为公开。
+  // - 'optional'：所有路由可选认证。有 session 时注入。
+  // - 'public'：所有路由默认公开。使用 @RequireAuth() 要求认证。
   defaultAuthBehavior: 'require',
 
-  // Optional: Enable debug logging
+  // 可选：启用调试日志
   debug: false,
 
-  // Optional: Custom middleware wrapping the auth handler
-  // Useful for ORM contexts (e.g., MikroORM RequestContext)
+  // 可选：自定义中间件包装认证处理器
+  // 适用于 ORM 上下文（如 MikroORM RequestContext）
   middleware: async (req, reply, next) => {
     await next();
   },
 
-  // Optional: Custom error messages (useful for i18n)
+  // 可选：自定义错误消息（用于国际化）
   errorMessages: {
-    unauthorized: 'Please log in first',
-    forbidden: 'Insufficient permissions',
-    sessionNotFresh: 'Please re-login to perform this action',
-    userBanned: 'Your account has been banned',
-    orgRequired: 'Please select an organization first',
-    orgRoleRequired: 'Insufficient organization role permissions',
-    orgPermissionRequired: 'You do not have permission for this operation',
-    apiKeyRequired: 'Valid API Key required',
-    apiKeyInvalidPermissions: 'API Key has insufficient permissions',
+    unauthorized: '请先登录',
+    forbidden: '权限不足',
+    sessionNotFresh: '请重新登录以执行此操作',
+    userBanned: '你的账户已被封禁',
+    orgRequired: '请先选择一个组织',
+    orgRoleRequired: '组织角色权限不足',
+    orgPermissionRequired: '你没有执行此操作的权限',
+    apiKeyRequired: '需要有效的 API Key',
+    apiKeyInvalidPermissions: 'API Key 权限不足',
   },
 
-  // Optional: Custom organization role permissions
-  // Override the default role-permission mapping
+  // 可选：自定义组织角色权限
+  // 覆盖默认的角色-权限映射
   orgRolePermissions: {
     owner: { organization: 'all', member: 'all' },
     admin: { organization: ['read', 'update'], member: ['read', 'create'] },
@@ -1002,10 +1002,10 @@ AuthModule.forRoot({
 });
 ```
 
-### Asynchronous Configuration
+### 异步配置
 
 ```typescript
-// Using useFactory
+// 使用 useFactory
 AuthModule.forRootAsync({
   imports: [ConfigModule],
   useFactory: (config: ConfigService) => ({
@@ -1014,41 +1014,41 @@ AuthModule.forRootAsync({
   inject: [ConfigService],
 });
 
-// Using useClass
+// 使用 useClass
 AuthModule.forRootAsync({
   useClass: AuthConfigService,
 });
 
-// Using useExisting
+// 使用 useExisting
 AuthModule.forRootAsync({
   imports: [ConfigModule],
   useExisting: ConfigService,
 });
 ```
 
-### Default Auth Behavior
+### 默认认证行为
 
-Control how routes behave by default:
+控制路由的默认行为：
 
-#### `'require'` (default) - Secure by default
+#### `'require'`（默认）- 默认安全
 
-All routes require authentication. Use `@AllowAnonymous()` for public routes:
+所有路由需要认证。使用 `@AllowAnonymous()` 设为公开：
 
 ```typescript
 @Controller('api')
 export class ApiController {
   @Get('protected')
-  protectedRoute() {} // Requires auth
+  protectedRoute() {} // 需要认证
 
   @AllowAnonymous()
   @Get('public')
-  publicRoute() {} // No auth required
+  publicRoute() {} // 无需认证
 }
 ```
 
-#### `'public'` - Open by default
+#### `'public'` - 默认开放
 
-All routes are public. Use `@RequireAuth()` for protected routes:
+所有路由默认公开。使用 `@RequireAuth()` 要求认证：
 
 ```typescript
 AuthModule.forRoot({
@@ -1059,17 +1059,17 @@ AuthModule.forRoot({
 @Controller('api')
 export class ApiController {
   @Get('public')
-  publicRoute() {} // No auth required
+  publicRoute() {} // 无需认证
 
   @RequireAuth()
   @Get('protected')
-  protectedRoute() {} // Requires auth
+  protectedRoute() {} // 需要认证
 }
 ```
 
-#### `'optional'` - Flexible auth
+#### `'optional'` - 灵活认证
 
-All routes accept both authenticated and anonymous requests:
+所有路由同时接受已认证和匿名请求：
 
 ```typescript
 AuthModule.forRoot({
@@ -1081,24 +1081,24 @@ AuthModule.forRoot({
 export class ApiController {
   @Get('greeting')
   greet(@CurrentUser() user: User | null) {
-    return user ? `Hello ${user.name}` : 'Hello guest';
+    return user ? `你好 ${user.name}` : '你好访客';
   }
 }
 ```
 
-## 🔌 Multi-Context Support
+## 🔌 多上下文支持
 
-### HTTP (Default)
+### HTTP（默认）
 
-Works out of the box with Fastify HTTP adapter.
+开箱即用，适配 Fastify HTTP 适配器。
 
 ### GraphQL
 
 ```typescript
-// Install dependencies
+// 安装依赖
 pnpm add @nestjs/graphql graphql
 
-// Decorators work the same way in resolvers
+// 装饰器在 resolver 中同样工作
 @Resolver()
 export class UserResolver {
   @Query(() => User)
@@ -1112,10 +1112,10 @@ export class UserResolver {
 ### WebSocket
 
 ```typescript
-// Install dependencies
+// 安装依赖
 pnpm add @nestjs/websockets @nestjs/platform-socket.io
 
-// Decorators work in gateways
+// 装饰器在 gateway 中工作
 @WebSocketGateway()
 export class EventsGateway {
   @SubscribeMessage('events')
@@ -1125,9 +1125,9 @@ export class EventsGateway {
 }
 ```
 
-## 🔧 Utility Functions
+## 🔧 工具函数
 
-The library exports utility functions for working with Fastify and Web standard APIs:
+该库导出用于 Fastify 和 Web 标准 API 的工具函数：
 
 ```typescript
 import {
@@ -1140,28 +1140,28 @@ import {
   getRequestFromContext,
 } from '@sapix/nestjs-better-auth-fastify';
 
-// Convert Fastify headers to Web standard Headers
+// 将 Fastify headers 转换为 Web 标准 Headers
 const webHeaders = toWebHeaders(request.headers);
 
-// Get Web standard Headers from Fastify Request
+// 从 Fastify Request 获取 Web 标准 Headers
 const headers = getWebHeadersFromRequest(request);
 
-// Build Web standard Request from Fastify Request
+// 从 Fastify Request 构建 Web 标准 Request
 const webRequest = toWebRequest(request);
 
-// Write Web Response to Fastify Reply
+// 将 Web Response 写入 Fastify Reply
 await writeWebResponseToReply(response, reply);
 
-// Normalize basePath (ensures starts with /, no trailing /)
+// 标准化 basePath（确保以 / 开头，无尾随 /）
 const path = normalizeBasePath('api/auth/'); // '/api/auth'
 
-// Get FastifyRequest from NestJS ExecutionContext (supports HTTP, GraphQL, WebSocket)
+// 从 NestJS ExecutionContext 获取 FastifyRequest（支持 HTTP、GraphQL、WebSocket）
 const request = getRequestFromContext(context);
 ```
 
-## 📝 Request Extension
+## 📝 Request 扩展
 
-The library extends `FastifyRequest` with auth-related properties:
+该库为 `FastifyRequest` 扩展了认证相关属性：
 
 ```typescript
 declare module 'fastify' {
@@ -1177,7 +1177,7 @@ declare module 'fastify' {
 }
 ```
 
-Access directly in route handlers:
+在路由处理器中直接访问：
 
 ```typescript
 @Get('profile')
@@ -1191,9 +1191,9 @@ getProfile(@Req() request: FastifyRequest) {
 }
 ```
 
-## 🧪 Testing
+## 🧪 测试
 
-### Unit Testing
+### 单元测试
 
 ```typescript
 import { Test } from '@nestjs/testing';
@@ -1210,7 +1210,7 @@ const module = await Test.createTestingModule({
 const authService = module.get(AuthService);
 ```
 
-### Mocking AuthService
+### Mock AuthService
 
 ```typescript
 const mockAuthService = {
@@ -1228,35 +1228,35 @@ const module = await Test.createTestingModule({
 }).compile();
 ```
 
-## 📋 Requirements
+## 📋 环境要求
 
 - Node.js >= 18.0.0
 - NestJS >= 10.0.0
 - Fastify >= 4.0.0
 - Better Auth >= 1.0.0
 
-## 🤝 Contributing
+## 🤝 贡献
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+欢迎贡献！请随时提交 Pull Request。
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+1. Fork 仓库
+2. 创建功能分支 (`git checkout -b feature/amazing-feature`)
+3. 提交更改 (`git commit -m 'Add some amazing feature'`)
+4. 推送到分支 (`git push origin feature/amazing-feature`)
+5. 打开 Pull Request
 
-## 📄 License
+## 📄 许可证
 
 MIT
 
-## 🔗 Links
+## 🔗 链接
 
-- [Better Auth Documentation](https://www.better-auth.com/docs)
-- [NestJS Documentation](https://docs.nestjs.com)
-- [Fastify Documentation](https://fastify.dev/docs)
+- [Better Auth 文档](https://www.better-auth.com/docs)
+- [NestJS 文档](https://docs.nestjs.com)
+- [Fastify 文档](https://fastify.dev/docs)
 
 ---
 
 <p align="center">
-  Made with ❤️ for the NestJS community
+  为 NestJS 社区用 ❤️ 制作
 </p>

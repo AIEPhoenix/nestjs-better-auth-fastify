@@ -101,13 +101,13 @@ export async function createTestAuth() {
   });
 
   // Directly use $migrate method to create tables (if available)
-  // @ts-ignore - Accessing internal API
+  // @ts-expect-error - Accessing internal API
   if (auth.$Infer) {
     // Use Kysely raw SQL to directly create tables
-    await runMigrations(testDb);
+    runMigrations(testDb);
   } else {
     // Try alternative approach
-    await runMigrations(testDb);
+    runMigrations(testDb);
   }
 
   return auth;
@@ -117,7 +117,7 @@ export async function createTestAuth() {
  * Manually run database migrations
  * better-auth table structure
  */
-async function runMigrations(db: ReturnType<typeof Database>) {
+function runMigrations(db: ReturnType<typeof Database>): void {
   // Create user table
   db.exec(`
     CREATE TABLE IF NOT EXISTS "user" (

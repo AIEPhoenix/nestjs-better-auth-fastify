@@ -49,6 +49,15 @@ export type OrgRolePermissions = Record<
 >;
 
 /**
+ * Default authentication behavior for routes
+ *
+ * - 'require': All routes require authentication by default. Use @AllowAnonymous() to make public.
+ * - 'optional': All routes have optional auth. Session is injected if present, but not required.
+ * - 'public': All routes are public by default. Use @RequireAuth() to require authentication.
+ */
+export type DefaultAuthBehavior = 'require' | 'optional' | 'public';
+
+/**
  * Configuration options for AuthModule
  *
  * @template T - Better Auth instance type for type inference
@@ -58,17 +67,15 @@ export interface AuthModuleOptions<T = Auth> {
   auth: T;
 
   /**
-   * Authentication route prefix
-   * If not specified, automatically reads from auth.options.basePath
-   * @default "/api/auth"
+   * Default authentication behavior for all routes
+   *
+   * - 'require': All routes require authentication by default. Use @AllowAnonymous() to make public. (default)
+   * - 'optional': All routes have optional auth. Session is injected if present, but not required.
+   * - 'public': All routes are public by default. Use @RequireAuth() to require authentication.
+   *
+   * @default 'require'
    */
-  basePath?: string;
-
-  /**
-   * Whether to disable global AuthGuard
-   * @default false
-   */
-  disableGlobalGuard?: boolean;
+  defaultAuthBehavior?: DefaultAuthBehavior;
 
   /**
    * Custom middleware wrapping the Better Auth handler
@@ -134,11 +141,6 @@ export interface AuthModuleOptionsFactory {
  * Async configuration options for AuthModule
  */
 export type AuthModuleAsyncOptions = {
-  /**
-   * Whether to disable global AuthGuard (at async config level)
-   */
-  disableGlobalGuard?: boolean;
-
   /**
    * Additional modules to import
    */

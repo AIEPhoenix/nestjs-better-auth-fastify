@@ -51,7 +51,7 @@ function validateAuthInstance(auth: unknown): void {
  *
  * Features:
  * - Automatically mounts Better Auth handler to specified basePath
- * - Global AuthGuard (can be disabled)
+ * - Global AuthGuard with configurable defaultAuthBehavior
  * - Supports HTTP, GraphQL, WebSocket
  * - Supports @Hook, @BeforeHook, @AfterHook decorators
  * - Supports custom middleware wrapping
@@ -101,14 +101,11 @@ export class AuthModule {
       },
       AuthService,
       AuthBootstrapService,
-    ];
-
-    if (!options.disableGlobalGuard) {
-      providers.push({
+      {
         provide: APP_GUARD,
         useClass: AuthGuard,
-      });
-    }
+      },
+    ];
 
     return {
       module: AuthModule,
@@ -153,14 +150,11 @@ export class AuthModule {
       ...this.createAsyncProviders(options),
       AuthService,
       AuthBootstrapService,
-    ];
-
-    if (!options.disableGlobalGuard) {
-      providers.push({
+      {
         provide: APP_GUARD,
         useClass: AuthGuard,
-      });
-    }
+      },
+    ];
 
     return {
       module: AuthModule,

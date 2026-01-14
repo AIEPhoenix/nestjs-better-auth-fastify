@@ -5,7 +5,7 @@
  * used for global database initialization and environment preparation
  */
 
-export async function setup() {
+export function setup(): void {
   // Set environment variables
   process.env.NODE_ENV = 'test';
   process.env.BETTER_AUTH_SECRET =
@@ -14,6 +14,6 @@ export async function setup() {
   console.log('\n🚀 Starting E2E tests with REAL better-auth...\n');
 }
 
-export async function teardown() {
+export function teardown(): void {
   console.log('\n✅ E2E tests completed\n');
 }

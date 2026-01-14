@@ -212,16 +212,13 @@ export class AuthBootstrapService implements OnModuleInit {
   }
 
   /**
-   * Get normalized basePath
-   * Priority: options.basePath > auth.options.basePath > default value
+   * Get normalized basePath from Better Auth options
    */
   private getBasePath(): string {
     const authOptions = this.options.auth.options as
       | { basePath?: string }
       | undefined;
-    const rawBasePath =
-      this.options.basePath ?? authOptions?.basePath ?? '/api/auth';
-    return normalizeBasePath(rawBasePath);
+    return normalizeBasePath(authOptions?.basePath ?? '/api/auth');
   }
 
   /**

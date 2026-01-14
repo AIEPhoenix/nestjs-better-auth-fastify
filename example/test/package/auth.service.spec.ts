@@ -98,15 +98,17 @@ describe('AuthService', () => {
       expect(svc.basePath).toBe('/api/auth');
     });
 
-    it('should prefer module basePath over auth options', async () => {
+    it('should read custom basePath from auth.options.basePath', async () => {
       const module: TestingModule = await Test.createTestingModule({
         providers: [
           AuthService,
           {
             provide: AUTH_MODULE_OPTIONS,
             useValue: {
-              auth: mockAuth,
-              basePath: '/custom/auth',
+              auth: {
+                api: {},
+                options: { basePath: '/custom/auth' },
+              },
             },
           },
         ],

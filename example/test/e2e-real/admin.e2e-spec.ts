@@ -91,8 +91,8 @@ describe('AdminController (e2e) - Real better-auth', () => {
       // Add permission to admin
       setUserPermissions(adminUserId, ['read:users']);
 
-      // Re-login to refresh session
-      const loginResult = await loginUser(app, {
+      // Re-login to refresh session (result unused, just triggering refresh)
+      await loginUser(app, {
         email: (
           await authenticatedRequest(app, adminCookies).get('/admin/dashboard')
         ).body.admin,

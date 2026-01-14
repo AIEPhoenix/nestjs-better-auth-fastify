@@ -29,7 +29,7 @@ describe('AuthModule', () => {
   };
 
   describe('forRoot', () => {
-    it('should provide AuthModule options', async () => {
+    it('should provide AuthModule options', () => {
       const options: AuthModuleOptions = {
         auth: mockAuth as any,
         basePath: '/api/auth',
@@ -58,20 +58,27 @@ describe('AuthModule', () => {
       expect(hasGuard).toBeTruthy();
     });
 
-    it('should not include global guard when disabled', () => {
+    it('should accept defaultAuthBehavior option', () => {
       const options: AuthModuleOptions = {
         auth: mockAuth as any,
-        disableGlobalGuard: true,
+        defaultAuthBehavior: 'public',
       };
 
       const dynamicModule = AuthModule.forRoot(options);
 
-      const guardProviders = dynamicModule.providers?.filter(
+      // Guard should always be included
+      const hasGuard = dynamicModule.providers?.some(
         (provider: any) =>
           provider.provide?.toString() === 'Symbol(APP_GUARD)' ||
           provider.provide === 'APP_GUARD',
       );
-      expect(guardProviders?.length ?? 0).toBe(0);
+      expect(hasGuard).toBeTruthy();
+
+      // Options should be passed through
+      const optionsProvider = dynamicModule.providers?.find(
+        (p: any) => p.provide === AUTH_MODULE_OPTIONS,
+      ) as any;
+      expect(optionsProvider?.useValue?.defaultAuthBehavior).toBe('public');
     });
   });
 
@@ -92,7 +99,7 @@ describe('AuthModule', () => {
         const TEST_TOKEN = 'TEST_TOKEN';
 
         const dynamicModule = AuthModule.forRootAsync({
-          useFactory: (testDep: string) => ({
+          useFactory: (_testDep: string) => ({
             auth: mockAuth as any,
           }),
           inject: [TEST_TOKEN],
@@ -164,8 +171,8 @@ describe('AuthModule', () => {
       });
     });
 
-    describe('disableGlobalGuard', () => {
-      it('should include guard by default', () => {
+    describe('global guard', () => {
+      it('should always include guard', () => {
         const dynamicModule = AuthModule.forRootAsync({
           useFactory: () => ({ auth: mockAuth as any }),
         });
@@ -178,18 +185,21 @@ describe('AuthModule', () => {
         expect(hasGuard).toBeTruthy();
       });
 
-      it('should not include guard when disabled', () => {
+      it('should pass defaultAuthBehavior through useFactory', () => {
         const dynamicModule = AuthModule.forRootAsync({
-          useFactory: () => ({ auth: mockAuth as any }),
-          disableGlobalGuard: true,
+          useFactory: () => ({
+            auth: mockAuth as any,
+            defaultAuthBehavior: 'optional',
+          }),
         });
 
-        const guardProviders = dynamicModule.providers?.filter(
+        // Guard should always be included regardless of defaultAuthBehavior
+        const hasGuard = dynamicModule.providers?.some(
           (provider: any) =>
             provider.provide?.toString() === 'Symbol(APP_GUARD)' ||
             provider.provide === 'APP_GUARD',
         );
-        expect(guardProviders?.length ?? 0).toBe(0);
+        expect(hasGuard).toBeTruthy();
       });
     });
   });
@@ -795,7 +805,7 @@ describe('AuthModule', () => {
         ]),
       };
 
-      const originalHook = async () => {
+      const originalHook = () => {
         executionOrder.push('original');
       };
 

@@ -21,6 +21,7 @@ export { AuthGuard } from './auth.guard';
 // ============================================
 export {
   AllowAnonymous,
+  RequireAuth,
   OptionalAuth,
   Roles,
   Permissions,
@@ -92,19 +93,28 @@ export { getRequestFromContext } from './auth.decorators';
 // Decorators - Metadata Keys
 // ============================================
 export {
+  // Access Control
   ALLOW_ANONYMOUS_KEY,
+  REQUIRE_AUTH_KEY,
   OPTIONAL_AUTH_KEY,
   ROLES_KEY,
   PERMISSIONS_KEY,
   FRESH_SESSION_KEY,
+  // Admin
   ADMIN_ONLY_KEY,
   BAN_CHECK_KEY,
-  API_KEY_AUTH_KEY,
   DISALLOW_IMPERSONATION_KEY,
+  // API Key
+  API_KEY_AUTH_KEY,
+  // Organization
   ORG_REQUIRED_KEY,
   LOAD_ORG_KEY,
   ORG_ROLES_KEY,
   ORG_PERMISSIONS_KEY,
+  // Hooks
+  HOOK_KEY,
+  BEFORE_HOOK_KEY,
+  AFTER_HOOK_KEY,
 } from './auth.decorators';
 
 // ============================================
@@ -129,6 +139,7 @@ export {
   type AuthModuleOptionsFactory,
   type AuthErrorMessages,
   type OrgRolePermissions,
+  type DefaultAuthBehavior,
 } from './auth.types';
 
 // ============================================
@@ -149,8 +160,6 @@ export {
   type AuthHookContext,
   type EnhancedAuthHookContext,
 } from './auth.types';
-
-export { HOOK_KEY, BEFORE_HOOK_KEY, AFTER_HOOK_KEY } from './auth.decorators';
 
 // ============================================
 // Types - Decorator Options

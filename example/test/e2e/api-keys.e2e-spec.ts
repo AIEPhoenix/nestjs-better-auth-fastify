@@ -11,7 +11,7 @@ describe('ApiKeysController (e2e)', () => {
   let app: NestFastifyApplication;
   let userCookies: string[];
   let userEmail: string;
-  let userId: string;
+  let _userId: string;
 
   beforeAll(async () => {
     app = await createTestApp();

@@ -42,7 +42,10 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@sapix/nestjs-better-auth-fastify': path.resolve(__dirname, '../src/index.ts'),
+      '@sapix/nestjs-better-auth-fastify': path.resolve(
+        __dirname,
+        '../src/index.ts',
+      ),
     },
   },
 });

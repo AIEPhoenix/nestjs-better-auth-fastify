@@ -21,19 +21,17 @@ import {
 describe('ApiKeysController (e2e) - Real better-auth', () => {
   let app: NestFastifyApplication;
   let userCookies: string[];
-  let userId: string;
 
   beforeAll(async () => {
     app = await createTestApp();
 
     // Create test user
-    const { cookies, user } = await createTestUser(app, {
+    const { cookies } = await createTestUser(app, {
       email: generateTestEmail('apikey-user'),
       password: 'Test123!',
       name: 'API Key Test User',
     });
     userCookies = cookies;
-    userId = user.id;
   });
 
   afterAll(async () => {
@@ -125,7 +123,7 @@ describe('ApiKeysController (e2e) - Real better-auth', () => {
           permissions: ['read:data'],
         });
         apiKey = result.apiKey.key;
-      } catch (error) {
+      } catch {
         // If better-auth API doesn't support this, skip test
         console.log('API Key creation not supported, skipping test');
         return;
@@ -175,7 +173,7 @@ describe('ApiKeysController (e2e) - Real better-auth', () => {
       try {
         const result = await createBearerToken(app, userCookies);
         token = result.token;
-      } catch (error) {
+      } catch {
         // If better-auth API doesn't support this, skip test
         console.log('Bearer token creation not supported, skipping test');
         return;
@@ -206,7 +204,7 @@ describe('ApiKeysController (e2e) - Real better-auth', () => {
           permissions: ['webhook:payment'],
         });
         apiKey = result.apiKey.key;
-      } catch (error) {
+      } catch {
         console.log('API Key creation not supported, skipping test');
         return;
       }
@@ -246,7 +244,7 @@ describe('ApiKeysController (e2e) - Real better-auth', () => {
           name: 'Universal Data Key',
         });
         apiKey = result.apiKey.key;
-      } catch (error) {
+      } catch {
         console.log('API Key creation not supported, skipping test');
         return;
       }
@@ -284,7 +282,7 @@ describe('ApiKeysController (e2e) - Real better-auth', () => {
           name: 'Flexible Data Key',
         });
         apiKey = result.apiKey.key;
-      } catch (error) {
+      } catch {
         console.log('API Key creation not supported, skipping test');
         return;
       }
@@ -367,7 +365,7 @@ describe('ApiKeysController (e2e) - Real better-auth', () => {
           name: 'Rate Limited Key',
         });
         apiKey = result.apiKey.key;
-      } catch (error) {
+      } catch {
         console.log('API Key creation not supported, skipping test');
         return;
       }

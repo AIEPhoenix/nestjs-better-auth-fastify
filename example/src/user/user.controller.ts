@@ -22,6 +22,7 @@ import {
   ImpersonatedBy,
   createAuthParamDecorator,
   OrgRequired,
+  OptionalOrg,
   CurrentOrg,
   OrgMember,
 } from '@sapix/nestjs-better-auth-fastify';
@@ -248,7 +249,7 @@ export class UserController {
   })
   changePassword(
     @CurrentUser() user: UserSession['user'],
-    @Body() body: { currentPassword: string; newPassword: string },
+    @Body() _body: { currentPassword: string; newPassword: string },
   ) {
     return {
       message: 'Password change request received',
@@ -610,9 +611,11 @@ export class UserController {
 
   @Get('context-with-org')
   @OptionalAuth()
+  @OptionalOrg()
   @ApiOperation({
     summary: 'Get context with optional org',
-    description: 'Shows context data with optional organization',
+    description:
+      'Demonstrates @OptionalOrg() - loads org context if available without requiring it',
   })
   @ApiResponse({ status: 200, description: 'Context with org info' })
   getContextWithOrg(

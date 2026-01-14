@@ -41,6 +41,7 @@ function getGqlExecutionContext(): GqlExecutionContextClass {
 }
 
 export const ALLOW_ANONYMOUS_KEY = 'auth:allowAnonymous';
+export const REQUIRE_AUTH_KEY = 'auth:requireAuth';
 export const OPTIONAL_AUTH_KEY = 'auth:optional';
 export const ROLES_KEY = 'auth:roles';
 export const PERMISSIONS_KEY = 'auth:permissions';

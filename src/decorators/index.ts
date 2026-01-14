@@ -8,6 +8,7 @@ export { getRequestFromContext } from './common';
 // ============================================
 export {
   ALLOW_ANONYMOUS_KEY,
+  REQUIRE_AUTH_KEY,
   OPTIONAL_AUTH_KEY,
   ROLES_KEY,
   PERMISSIONS_KEY,
@@ -42,6 +43,7 @@ export type {
 // ============================================
 export {
   AllowAnonymous,
+  RequireAuth,
   OptionalAuth,
   Roles,
   Permissions,

@@ -24,9 +24,11 @@ import {
   OrgPermissionOptions,
   OrgRolePermissions,
   AuthErrorMessages,
+  DefaultAuthBehavior,
 } from './auth.types';
 import {
   ALLOW_ANONYMOUS_KEY,
+  REQUIRE_AUTH_KEY,
   OPTIONAL_AUTH_KEY,
   ROLES_KEY,
   PERMISSIONS_KEY,
@@ -254,6 +256,8 @@ function createError(
 // ============================================
 
 interface Metadata {
+  isAnonymous?: boolean;
+  requireAuth?: boolean;
   isOptional?: boolean;
   apiKeyAuth?: ApiKeyAuthMetadata;
   banCheck?: boolean;
@@ -313,12 +317,17 @@ const DEFAULT_API_KEY_HEADERS = ['x-api-key'];
 /**
  * Authentication Guard
  *
- * Globally registered by default, all routes require authentication
+ * Globally registered, behavior controlled by `defaultAuthBehavior` option:
+ * - 'require' (default): All routes require authentication
+ * - 'optional': All routes have optional auth (session injected if present)
+ * - 'public': All routes are public by default
+ *
  * Supports HTTP, GraphQL, WebSocket
  *
  * Supported decorators:
- * - @AllowAnonymous() - Skip authentication
- * - @OptionalAuth() - Optional authentication
+ * - @AllowAnonymous() - Mark route as public (overrides defaultAuthBehavior)
+ * - @RequireAuth() - Require authentication (overrides defaultAuthBehavior)
+ * - @OptionalAuth() - Optional authentication (overrides defaultAuthBehavior)
  * - @Roles(['admin']) - Role validation
  * - @Permissions(['read']) - Permission validation
  * - @RequireFreshSession() - Require fresh session
@@ -362,20 +371,14 @@ export class AuthGuard implements CanActivate {
     const errorMessages = this.options.errorMessages;
     const targets = [context.getHandler(), context.getClass()];
 
-    // 1. Fast path: Check @AllowAnonymous() first (single reflector call)
-    const isPublic = this.reflector.getAllAndOverride<boolean>(
-      ALLOW_ANONYMOUS_KEY,
-      targets,
-    );
-    if (isPublic) {
-      await this.tryAttachSession(request);
-      return true;
-    }
-
-    // 2. Get full metadata only for non-public routes
+    // 1. Get full metadata
     const metadata = this.getMetadata(targets);
 
-    // 3. Try API Key authentication if configured
+    // 2. Determine effective auth behavior
+    // Priority: @AllowAnonymous > @RequireAuth > @OptionalAuth > defaultAuthBehavior
+    const effectiveBehavior = this.getEffectiveAuthBehavior(metadata);
+
+    // 3. Try API Key authentication if configured (before session check)
     if (metadata.apiKeyAuth) {
       const apiKeyResult = await this.tryApiKeyAuth(request);
       if (apiKeyResult) {
@@ -423,11 +426,12 @@ export class AuthGuard implements CanActivate {
       request.impersonatedBy = impersonatedBy ?? null;
     }
 
-    // 6. Handle no session
+    // 6. Handle no session based on effective behavior
     if (!session) {
-      if (metadata.isOptional) {
+      if (effectiveBehavior === 'public' || effectiveBehavior === 'optional') {
         return true;
       }
+      // effectiveBehavior === 'require'
       throw createError(contextType, 'UNAUTHORIZED', undefined, errorMessages);
     }
 
@@ -455,8 +459,44 @@ export class AuthGuard implements CanActivate {
     return true;
   }
 
+  /**
+   * Determine effective auth behavior based on decorators and config
+   * Priority: @AllowAnonymous > @RequireAuth > @OptionalAuth > defaultAuthBehavior
+   */
+  private getEffectiveAuthBehavior(
+    metadata: Metadata,
+  ): DefaultAuthBehavior | 'public' {
+    // @AllowAnonymous() - always public
+    if (metadata.isAnonymous) {
+      return 'public';
+    }
+
+    // @RequireAuth() - always require
+    if (metadata.requireAuth) {
+      return 'require';
+    }
+
+    // @OptionalAuth() - always optional
+    if (metadata.isOptional) {
+      return 'optional';
+    }
+
+    // Fall back to defaultAuthBehavior config
+    return this.options.defaultAuthBehavior ?? 'require';
+  }
+
+  // NestJS Reflector.getAllAndOverride expects (Type | Function)[] as targets
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   private getMetadata(targets: Function[]): Metadata {
     return {
+      isAnonymous: this.reflector.getAllAndOverride<boolean>(
+        ALLOW_ANONYMOUS_KEY,
+        targets,
+      ),
+      requireAuth: this.reflector.getAllAndOverride<boolean>(
+        REQUIRE_AUTH_KEY,
+        targets,
+      ),
       isOptional: this.reflector.getAllAndOverride<boolean>(
         OPTIONAL_AUTH_KEY,
         targets,
@@ -998,29 +1038,6 @@ export class AuthGuard implements CanActivate {
     const freshAge = maxAge ?? this.auth.options?.session?.freshAge ?? 86400;
     const ageInSeconds = (Date.now() - createdAt.getTime()) / 1000;
     return ageInSeconds <= freshAge;
-  }
-
-  /**
-   * Attach session to request (for public routes)
-   * Errors are logged in debug mode but don't affect the request
-   */
-  private async tryAttachSession(request: FastifyRequest): Promise<void> {
-    try {
-      const session = await this.getSession(request);
-      request.session = session;
-      request.user = session?.user ?? null;
-
-      if (session) {
-        const adminSession = session.session as AdminSession;
-        const impersonatedBy = adminSession.impersonatedBy;
-        request.isImpersonating = !!impersonatedBy;
-        request.impersonatedBy = impersonatedBy ?? null;
-      }
-    } catch (error) {
-      if (this.options.debug) {
-        this.logger.debug('Failed to attach session for public route', error);
-      }
-    }
   }
 
   private checkArrayMembership(

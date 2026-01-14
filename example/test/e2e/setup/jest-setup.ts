@@ -20,7 +20,7 @@ global.__mockAuthSessions = global.__mockAuthSessions || new Map();
 global.__mockAuthApiKeys = global.__mockAuthApiKeys || new Map();
 
 // Helper to generate IDs
-const generateId = () => Math.random().toString(36).substring(2, 15);
+const _generateId = () => Math.random().toString(36).substring(2, 15);
 
 // Mock better-auth/plugins (ESM module)
 jest.mock('better-auth/plugins', () => ({

@@ -6,7 +6,6 @@
  */
 import { NestFastifyApplication } from '@nestjs/platform-fastify';
 import request from 'supertest';
-import { getTestAuth } from './test-app';
 import { getTestDb } from './test-auth.config';
 
 /**
@@ -224,7 +223,6 @@ export function banUser(userId: string, reason?: string): void {
 
   try {
     const banReason = reason || 'Banned by test';
-    const bannedAt = new Date().toISOString();
     db.prepare(
       'UPDATE user SET banned = 1, banReason = ?, banExpires = NULL WHERE id = ?',
     ).run(banReason, userId);

@@ -5,6 +5,7 @@ import {
   toWebRequest,
   writeWebResponseToReply,
   normalizeBasePath,
+  parseStringToArray,
 } from '@sapix/nestjs-better-auth-fastify';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
@@ -413,6 +414,40 @@ describe('auth.utils', () => {
 
     it('should preserve nested paths', () => {
       expect(normalizeBasePath('/v1/api/auth')).toBe('/v1/api/auth');
+    });
+  });
+
+  describe('parseStringToArray', () => {
+    it('should parse comma-separated string into array', () => {
+      expect(parseStringToArray('admin,user')).toEqual(['admin', 'user']);
+    });
+
+    it('should trim whitespace from values', () => {
+      expect(parseStringToArray('admin , user , moderator')).toEqual([
+        'admin',
+        'user',
+        'moderator',
+      ]);
+    });
+
+    it('should return array as-is when given an array', () => {
+      expect(parseStringToArray(['admin', 'user'])).toEqual(['admin', 'user']);
+    });
+
+    it('should return empty array for undefined', () => {
+      expect(parseStringToArray(undefined)).toEqual([]);
+    });
+
+    it('should return empty array for empty string', () => {
+      expect(parseStringToArray('')).toEqual([]);
+    });
+
+    it('should filter out empty values after split', () => {
+      expect(parseStringToArray('admin,,user,')).toEqual(['admin', 'user']);
+    });
+
+    it('should handle single value', () => {
+      expect(parseStringToArray('admin')).toEqual(['admin']);
     });
   });
 });

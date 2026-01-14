@@ -11,7 +11,6 @@ import {
   createTestUser,
   generateTestEmail,
   authenticatedRequest,
-  loginUser,
 } from './setup/test-utils';
 
 describe('AppController (e2e) - Real better-auth', () => {
@@ -228,7 +227,7 @@ describe('AppController (e2e) - Real better-auth', () => {
     });
 
     it('GET /greeting - should return personalized greeting with auth', async () => {
-      const { cookies, user } = await createTestUser(app, {
+      const { cookies } = await createTestUser(app, {
         email: generateTestEmail('greeting'),
         password: 'Test123!',
         name: 'Greeting User',
