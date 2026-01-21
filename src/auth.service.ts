@@ -230,9 +230,11 @@ export class AuthService<T extends { api: T['api'] } = AuthWithApi> {
   async validateSession(request: FastifyRequest): Promise<InferSession<T>> {
     const session = await this.getSessionFromRequest(request);
     if (!session) {
+      const message =
+        this.options.errorMessages?.unauthorized ?? 'Please sign in to continue';
       throw new UnauthorizedException({
         code: 'UNAUTHORIZED',
-        message: 'Authentication required',
+        message,
       });
     }
     return session;

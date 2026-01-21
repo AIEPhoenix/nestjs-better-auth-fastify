@@ -156,7 +156,12 @@ type ErrorType =
   | 'ORG_ROLE_REQUIRED'
   | 'ORG_PERMISSION_REQUIRED'
   | 'API_KEY_REQUIRED'
-  | 'API_KEY_INVALID_PERMISSIONS';
+  | 'API_KEY_INVALID_PERMISSIONS'
+  | 'ADMIN_REQUIRED'
+  | 'IMPERSONATION_NOT_ALLOWED'
+  | 'ROLE_REQUIRED'
+  | 'PERMISSION_REQUIRED'
+  | 'ORG_MEMBERSHIP_REQUIRED';
 
 interface ErrorOptions {
   message?: string;
@@ -168,16 +173,20 @@ interface ErrorOptions {
  * Default error messages (can be overridden via AuthModuleOptions)
  */
 const DEFAULT_ERROR_MESSAGES: Record<ErrorType, string> = {
-  UNAUTHORIZED: 'Authentication required',
-  FORBIDDEN: 'Insufficient permissions',
-  SESSION_NOT_FRESH: 'Session is not fresh. Please re-authenticate.',
-  USER_BANNED: 'User account is banned',
-  ORG_REQUIRED:
-    'Organization context required. Please set an active organization.',
-  ORG_ROLE_REQUIRED: 'Insufficient organization role',
-  ORG_PERMISSION_REQUIRED: 'Insufficient organization permission',
-  API_KEY_REQUIRED: 'Valid API key required',
-  API_KEY_INVALID_PERMISSIONS: 'API key lacks required permissions',
+  UNAUTHORIZED: 'Please sign in to continue',
+  FORBIDDEN: 'You do not have permission to perform this action',
+  SESSION_NOT_FRESH: 'Please sign in again to continue',
+  USER_BANNED: 'Your account has been suspended',
+  ORG_REQUIRED: 'Please select an organization to continue',
+  ORG_ROLE_REQUIRED: 'Your organization role cannot perform this action',
+  ORG_PERMISSION_REQUIRED: 'You lack the required organization permission',
+  API_KEY_REQUIRED: 'A valid API key is required',
+  API_KEY_INVALID_PERMISSIONS: 'Your API key lacks the required permissions',
+  ADMIN_REQUIRED: 'This action requires administrator privileges',
+  IMPERSONATION_NOT_ALLOWED: 'This action cannot be performed while impersonating',
+  ROLE_REQUIRED: 'Your role cannot perform this action',
+  PERMISSION_REQUIRED: 'You lack the required permission',
+  ORG_MEMBERSHIP_REQUIRED: 'You must be a member of this organization',
 };
 
 /**
@@ -193,6 +202,11 @@ const ERROR_MESSAGE_MAPPING: Record<ErrorType, keyof AuthErrorMessages> = {
   ORG_PERMISSION_REQUIRED: 'orgPermissionRequired',
   API_KEY_REQUIRED: 'apiKeyRequired',
   API_KEY_INVALID_PERMISSIONS: 'apiKeyInvalidPermissions',
+  ADMIN_REQUIRED: 'adminRequired',
+  IMPERSONATION_NOT_ALLOWED: 'impersonationNotAllowed',
+  ROLE_REQUIRED: 'roleRequired',
+  PERMISSION_REQUIRED: 'permissionRequired',
+  ORG_MEMBERSHIP_REQUIRED: 'orgMembershipRequired',
 };
 
 /**
@@ -577,12 +591,8 @@ export class AuthGuard implements CanActivate {
     if (metadata.disallowImpersonation && request.isImpersonating) {
       throw createError(
         contextType,
-        'FORBIDDEN',
-        {
-          message:
-            metadata.disallowImpersonation.message ??
-            'This action is not allowed during impersonation',
-        },
+        'IMPERSONATION_NOT_ALLOWED',
+        { message: metadata.disallowImpersonation.message },
         errorMessages,
       );
     }
@@ -619,8 +629,8 @@ export class AuthGuard implements CanActivate {
       if (!this.checkUserRoles(session.user.role, ['admin'], 'any')) {
         throw createError(
           contextType,
-          'FORBIDDEN',
-          { message: metadata.adminOnly.message ?? 'Admin access required' },
+          'ADMIN_REQUIRED',
+          { message: metadata.adminOnly.message },
           errorMessages,
         );
       }
@@ -637,11 +647,8 @@ export class AuthGuard implements CanActivate {
       ) {
         throw createError(
           contextType,
-          'FORBIDDEN',
-          {
-            message:
-              metadata.roles.options.message ?? 'Insufficient role permissions',
-          },
+          'ROLE_REQUIRED',
+          { message: metadata.roles.options.message },
           errorMessages,
         );
       }
@@ -661,12 +668,8 @@ export class AuthGuard implements CanActivate {
       ) {
         throw createError(
           contextType,
-          'FORBIDDEN',
-          {
-            message:
-              metadata.permissions.options.message ??
-              'Insufficient permissions',
-          },
+          'PERMISSION_REQUIRED',
+          { message: metadata.permissions.options.message },
           errorMessages,
         );
       }
@@ -709,12 +712,8 @@ export class AuthGuard implements CanActivate {
       if (!orgContext?.member) {
         throw createError(
           contextType,
-          'ORG_ROLE_REQUIRED',
-          {
-            message:
-              metadata.orgRoles.options.message ??
-              'Organization membership required',
-          },
+          'ORG_MEMBERSHIP_REQUIRED',
+          { message: metadata.orgRoles.options.message },
           errorMessages,
         );
       }
@@ -729,11 +728,7 @@ export class AuthGuard implements CanActivate {
         throw createError(
           contextType,
           'ORG_ROLE_REQUIRED',
-          {
-            message:
-              metadata.orgRoles.options.message ??
-              'Insufficient organization role',
-          },
+          { message: metadata.orgRoles.options.message },
           errorMessages,
         );
       }
@@ -744,12 +739,8 @@ export class AuthGuard implements CanActivate {
       if (!orgContext?.member) {
         throw createError(
           contextType,
-          'ORG_PERMISSION_REQUIRED',
-          {
-            message:
-              metadata.orgPermissions.options.message ??
-              'Organization membership required',
-          },
+          'ORG_MEMBERSHIP_REQUIRED',
+          { message: metadata.orgPermissions.options.message },
           errorMessages,
         );
       }
@@ -763,11 +754,7 @@ export class AuthGuard implements CanActivate {
         throw createError(
           contextType,
           'ORG_PERMISSION_REQUIRED',
-          {
-            message:
-              metadata.orgPermissions.options.message ??
-              'Insufficient organization permission',
-          },
+          { message: metadata.orgPermissions.options.message },
           errorMessages,
         );
       }

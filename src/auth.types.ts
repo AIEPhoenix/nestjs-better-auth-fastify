@@ -9,17 +9,37 @@ import type { ModuleMetadata, Type } from '@nestjs/common';
 
 /**
  * Custom error messages configuration
+ * Useful for internationalization (i18n)
  */
 export interface AuthErrorMessages {
+  /** @AllowAnonymous bypass, session validation failed */
   unauthorized?: string;
+  /** Generic forbidden error */
   forbidden?: string;
+  /** @RequireFreshSession check failed */
   sessionNotFresh?: string;
+  /** @BanCheck detected banned user */
   userBanned?: string;
+  /** @OrgRequired but no organization context */
   orgRequired?: string;
+  /** @OrgRoles check failed */
   orgRoleRequired?: string;
+  /** @OrgPermission check failed */
   orgPermissionRequired?: string;
+  /** @ApiKeyAuth but no valid API key */
   apiKeyRequired?: string;
+  /** @ApiKeyAuth permission check failed */
   apiKeyInvalidPermissions?: string;
+  /** @AdminOnly check failed */
+  adminRequired?: string;
+  /** @DisallowImpersonation but session is impersonated */
+  impersonationNotAllowed?: string;
+  /** @Roles check failed */
+  roleRequired?: string;
+  /** @Permissions check failed */
+  permissionRequired?: string;
+  /** Organization membership required but user is not a member */
+  orgMembershipRequired?: string;
 }
 
 /**

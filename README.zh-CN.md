@@ -1016,15 +1016,20 @@ AuthModule.forRoot({
 
   // 可选：自定义错误消息（用于国际化）
   errorMessages: {
-    unauthorized: '请先登录',
-    forbidden: '权限不足',
-    sessionNotFresh: '请重新登录以执行此操作',
-    userBanned: '你的账户已被封禁',
-    orgRequired: '请先选择一个组织',
-    orgRoleRequired: '组织角色权限不足',
-    orgPermissionRequired: '你没有执行此操作的权限',
-    apiKeyRequired: '需要有效的 API Key',
-    apiKeyInvalidPermissions: 'API Key 权限不足',
+    unauthorized: '请登录后继续',
+    forbidden: '你没有权限执行此操作',
+    sessionNotFresh: '请重新登录后继续',
+    userBanned: '你的账户已被暂停使用',
+    orgRequired: '请选择一个组织后继续',
+    orgRoleRequired: '你的组织角色无法执行此操作',
+    orgPermissionRequired: '你缺少所需的组织权限',
+    apiKeyRequired: '需要提供有效的 API Key',
+    apiKeyInvalidPermissions: '你的 API Key 缺少所需权限',
+    adminRequired: '此操作需要管理员权限',
+    impersonationNotAllowed: '模拟登录时无法执行此操作',
+    roleRequired: '你的角色无法执行此操作',
+    permissionRequired: '你缺少所需的权限',
+    orgMembershipRequired: '你必须是此组织的成员',
   },
 
   // 可选：自定义组织角色权限

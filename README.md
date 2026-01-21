@@ -1016,15 +1016,20 @@ AuthModule.forRoot({
 
   // Optional: Custom error messages (useful for i18n)
   errorMessages: {
-    unauthorized: 'Please log in first',
-    forbidden: 'Insufficient permissions',
-    sessionNotFresh: 'Please re-login to perform this action',
-    userBanned: 'Your account has been banned',
-    orgRequired: 'Please select an organization first',
-    orgRoleRequired: 'Insufficient organization role permissions',
-    orgPermissionRequired: 'You do not have permission for this operation',
-    apiKeyRequired: 'Valid API Key required',
-    apiKeyInvalidPermissions: 'API Key has insufficient permissions',
+    unauthorized: 'Please sign in to continue',
+    forbidden: 'You do not have permission to perform this action',
+    sessionNotFresh: 'Please sign in again to continue',
+    userBanned: 'Your account has been suspended',
+    orgRequired: 'Please select an organization to continue',
+    orgRoleRequired: 'Your organization role cannot perform this action',
+    orgPermissionRequired: 'You lack the required organization permission',
+    apiKeyRequired: 'A valid API key is required',
+    apiKeyInvalidPermissions: 'Your API key lacks the required permissions',
+    adminRequired: 'This action requires administrator privileges',
+    impersonationNotAllowed: 'This action cannot be performed while impersonating',
+    roleRequired: 'Your role cannot perform this action',
+    permissionRequired: 'You lack the required permission',
+    orgMembershipRequired: 'You must be a member of this organization',
   },
 
   // Optional: Custom organization role permissions
